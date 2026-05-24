@@ -183,51 +183,77 @@ body{color:#FBF7F0;font-family:var(--font-sans);cursor:none;-webkit-font-smoothi
 /* ── Opening scene ── */
 @keyframes openingBg{
   0%,100%{background:#0E0B16;}
-  20%    {background:#181420;}
-  45%    {background:#1d1328;}
-  65%    {background:#1c1820;}
-  82%    {background:#181420;}
+  25%    {background:#1a1228;}
+  50%    {background:#1e1520;}
+  75%    {background:#181420;}
 }
-.scene.opening{animation:openingBg 18s ease-in-out infinite;}
+.scene.opening{animation:openingBg 20s ease-in-out infinite;}
 
 .opening-wrap{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
 }
 .opening-mark{text-align:center;z-index:2;user-select:none;}
 
-/* The big O on opening — purely a circle outline, breathing */
+/* Big O — fades in on load, then breathes with glow */
+@keyframes oAppear{
+  from{opacity:0;transform:scale(0.9);}
+  to  {opacity:1;transform:scale(1);}
+}
+@keyframes breathe{
+  0%,100%{
+    transform:scale(1);
+    border-color:rgba(240,234,224,.18);
+    box-shadow:0 0 0 0 rgba(155,127,166,0);
+  }
+  50%{
+    transform:scale(1.09);
+    border-color:rgba(155,127,166,.55);
+    box-shadow:0 0 70px 24px rgba(155,127,166,.13),0 0 140px 60px rgba(155,127,166,.05);
+  }
+}
+
 .O-big{
   width:260px;height:260px;
-  border:2px solid rgba(240,234,224,.2);border-radius:50%;
-  margin:0 auto 32px;
-  animation:breathe 6s ease-in-out infinite;
+  border:2px solid rgba(240,234,224,.18);border-radius:50%;
+  margin:0 auto 36px;
   position:relative;
-  background:radial-gradient(circle at 35% 35%,rgba(155,127,166,.08),transparent 65%);
+  background:radial-gradient(circle at 35% 35%,rgba(155,127,166,.06),transparent 65%);
+  /* appear first, breathe after */
+  animation:oAppear 1.4s ease-out 0.15s both, breathe 5.5s ease-in-out 1.6s infinite;
 }
-@keyframes breathe{0%,100%{transform:scale(1);border-color:rgba(240,234,224,.2);}50%{transform:scale(1.025);border-color:rgba(155,127,166,.35);}}
 
+/* Staggered text fade-ins */
+@keyframes fadeSlideUp{
+  from{opacity:0;transform:translateY(10px);}
+  to  {opacity:1;transform:translateY(0);}
+}
 .opening-wm{
   font-weight:500;font-size:46px;letter-spacing:-0.03em;color:var(--bone-50);
   display:flex;align-items:baseline;justify-content:center;gap:9px;
+  opacity:0;animation:fadeSlideUp 1s ease-out 0.7s both;
 }
 .opening-wm .the{font-size:19px;font-weight:200;opacity:.6;}
-.opening-sub{margin-top:18px;font-size:12.5px;color:rgba(240,234,224,.5);letter-spacing:.2em;text-transform:uppercase;}
-.opening-hint{
-  margin-top:52px;font-size:11px;font-family:var(--font-mono);
-  letter-spacing:.2em;color:rgba(155,127,166,.6);text-transform:uppercase;
-  animation:hintPulse 3s ease-in-out infinite;
+.opening-sub{
+  margin-top:18px;font-size:12.5px;color:rgba(240,234,224,.5);
+  letter-spacing:.2em;text-transform:uppercase;
+  opacity:0;animation:fadeSlideUp 0.9s ease-out 1.4s both;
 }
-@keyframes hintPulse{0%,100%{opacity:.6;}50%{opacity:1;}}
+.opening-hint{
+  margin-top:56px;font-size:11px;font-family:var(--font-mono);
+  letter-spacing:.2em;color:rgba(155,127,166,.65);text-transform:uppercase;
+  opacity:0;animation:fadeSlideUp 0.9s ease-out 2.3s both, hintPulse 3.5s ease-in-out 3.4s infinite;
+}
+@keyframes hintPulse{0%,100%{opacity:.55;}50%{opacity:1;}}
 
-/* ── Flying O (morph transition) ── */
+/* ── Flying O (iris wipe — expands to cover entire screen) ── */
 .flying-o{
   position:fixed;border-radius:50%;pointer-events:none;z-index:200;
-  border:2px solid rgba(240,234,224,.3);
-  background:
-    radial-gradient(circle at 30% 30%,rgba(255,255,255,.18),transparent 60%),
-    linear-gradient(180deg,#C49A7A 0%,#9B7FA6 70%,transparent 100%);
+  /* Size + position set by JS before animation starts */
+  border:none;
+  background:radial-gradient(circle at 50% 50%,#1e1430 0%,#0D0A15 55%,#0E0B16 100%);
   opacity:0;
-  /* Left/top/width/height animated by WAAPI */
+  transform-origin:center center;
+  will-change:transform,opacity;
 }
 
 /* ── Modal overlay ── */
@@ -349,8 +375,8 @@ body{color:#FBF7F0;font-family:var(--font-sans);cursor:none;-webkit-font-smoothi
 @media(max-width:580px){
   .topbar-nav{display:none;}
   .brand .sep,.brand .sub{display:none;}
-  .O-big{width:200px;height:200px;}
-  .opening-wm{font-size:36px;}
+  .O-big{width:190px;height:190px;}
+  .opening-wm{font-size:34px;}
 }
 </style>
 
@@ -598,7 +624,15 @@ const SCENES = [
   { id:'begin', kind:'begin', label:'Begin', mood:'begin · a conversation' },
 ];
 
-// ── Flying O — morphs from opening center to salon O-window position ──────────
+// ── Flying O — iris wipe: O expands to fill screen, room fades in beneath ────
+// Duration breakdown:
+//   0 →  100ms : O snaps visible at its starting size
+//   100 → 1300ms: O expands (scale) to cover the entire viewport
+//   1300 → 1700ms: O holds, covering everything (room is fading in behind it)
+//   1700 → 2800ms: O fades out, revealing the room beneath
+//
+// setIdx(1) fires at ~750ms so the room fade-in (2200ms) begins while
+// the O is still expanding — when the O lifts, the room is already there.
 
 function FlyingO({ active, onDone }) {
   const ref = useRef(null);
@@ -609,36 +643,37 @@ function FlyingO({ active, onDone }) {
     if (!el) return;
 
     const vw = window.innerWidth, vh = window.innerHeight;
-    // Scene area bounds
-    const marginH = window.innerWidth <= 880 ? 14 : 32;
-    const sceneLeft = marginH;
-    const sceneW = vw - marginH * 2;
-    const sceneH = vh - 64 - 80;     // top bar 64, bottom bar 80
+    // Diameter large enough to cover the full viewport from any point
+    const diagonal = Math.ceil(Math.sqrt(vw * vw + vh * vh)) * 1.08;
+    const oBigSize  = vw <= 580 ? 200 : 260;
 
-    // Opening O-big: 260×260 centered in full viewport
-    const oBigSize = vw <= 580 ? 200 : 260;
-    const sx = vw / 2 - oBigSize / 2;
-    const sy = vh / 2 - oBigSize / 2;
+    // Center the large circle over the viewport
+    Object.assign(el.style, {
+      width:  diagonal + 'px',
+      height: diagonal + 'px',
+      left:   (vw / 2 - diagonal / 2) + 'px',
+      top:    (vh / 2 - diagonal / 2) + 'px',
+      opacity: '0',
+      transform: `scale(${oBigSize / diagonal})`,
+    });
 
-    // Salon O-window: left 58%, top 14%, width 42% of scene area
-    const owSize = sceneW * 0.42;
-    const ex = sceneLeft + sceneW * 0.58;
-    const ey = 64 + sceneH * 0.14;
+    const anim = el.animate([
+      // snap on
+      { transform: `scale(${oBigSize / diagonal})`,       opacity: 0,    offset: 0 },
+      { transform: `scale(${oBigSize / diagonal})`,       opacity: 0.96, offset: 0.035 },
+      // expand to fill screen
+      { transform: 'scale(1)',                            opacity: 0.97, offset: 0.46 },
+      // hold
+      { transform: 'scale(1)',                            opacity: 0.97, offset: 0.60 },
+      // fade out to reveal room
+      { transform: 'scale(1)',                            opacity: 0,    offset: 1 },
+    ], {
+      duration: 2800,
+      easing:   'cubic-bezier(0.65, 0, 0.35, 1)',
+      fill:     'forwards',
+    });
 
-    // Snap element to start position
-    el.style.left   = sx + 'px';
-    el.style.top    = sy + 'px';
-    el.style.width  = oBigSize + 'px';
-    el.style.height = oBigSize + 'px';
-    el.style.opacity = '0';
-
-    el.animate([
-      { left: sx+'px', top: sy+'px', width: oBigSize+'px', height: oBigSize+'px', opacity: 0 },
-      { left: sx+'px', top: sy+'px', width: oBigSize+'px', height: oBigSize+'px', opacity: 1, offset: 0.08 },
-      { left: ex+'px', top: ey+'px', width: owSize+'px',   height: owSize+'px',   opacity: 0.9, offset: 0.85 },
-      { left: ex+'px', top: ey+'px', width: owSize+'px',   height: owSize+'px',   opacity: 0 },
-    ], { duration: 900, easing: 'cubic-bezier(0.22,1,0.36,1)', fill: 'forwards' })
-      .addEventListener('finish', onDone);
+    anim.addEventListener('finish', onDone);
   }, [active]);
 
   return <div ref={ref} className="flying-o" />;
@@ -663,7 +698,7 @@ function Modal({ item, pos, onClose }) {
     if (open) {
       mask.style.pointerEvents = 'auto';
       mask.animate([{ opacity:0 },{ opacity:1 }],
-        { duration: 320, easing: 'ease-out', fill: 'forwards' });
+        { duration: 500, easing: 'ease-out', fill: 'forwards' });
 
       // Scale from hotspot position toward card center
       const cx = window.innerWidth / 2;
@@ -675,16 +710,16 @@ function Modal({ item, pos, onClose }) {
 
       card.animate(
         [{ transform: startT, opacity: 0 }, { transform: endT, opacity: 1 }],
-        { duration: 480, easing: 'cubic-bezier(0.22,1,0.36,1)', fill: 'forwards' }
+        { duration: 700, easing: 'cubic-bezier(0.22,1,0.36,1)', fill: 'forwards' }
       );
     } else {
       mask.style.pointerEvents = 'none';
       mask.animate([{ opacity:1 },{ opacity:0 }],
-        { duration: 240, easing: 'ease-in', fill: 'forwards' });
+        { duration: 380, easing: 'ease-in', fill: 'forwards' });
       const a = card.animate(
         [{ transform:'translate(-50%,-50%) scale(1)', opacity:1 },
-         { transform:'translate(-50%,-50%) scale(0.88)', opacity:0 }],
-        { duration: 220, easing: 'ease-in', fill: 'forwards' }
+         { transform:'translate(-50%,-50%) scale(0.9)', opacity:0 }],
+        { duration: 350, easing: 'ease-in', fill: 'forwards' }
       );
       a.addEventListener('finish', () => setContent(null));
     }
@@ -909,8 +944,8 @@ function SceneSlot({ scene, isActive, isBehind, children }) {
     if (!el) return;
 
     const targetOp    = isActive ? 1 : 0;
-    const targetScale = isActive ? 1 : (isBehind ? 0.96 : 1.04);
-    const targetBlur  = isActive ? 0 : 8;
+    const targetScale = isActive ? 1 : (isBehind ? 0.975 : 1.025);
+    const targetBlur  = isActive ? 0 : 5;
 
     el.getAnimations().forEach(a => a.cancel());
     const cs = getComputedStyle(el);
@@ -921,7 +956,7 @@ function SceneSlot({ scene, isActive, isBehind, children }) {
     el.animate([
       { opacity: curOp, transform: curTr, filter: curFl },
       { opacity: targetOp, transform: `scale(${targetScale})`, filter: `blur(${targetBlur}px)` },
-    ], { duration: 900, easing: 'cubic-bezier(0.22,1,0.36,1)', fill: 'forwards' });
+    ], { duration: 2200, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'forwards' });
 
     prevActive.current = isActive;
   }, [isActive, isBehind]);
@@ -953,13 +988,14 @@ function Stage() {
   const [flyingO, setFlyingO]   = useState(false);
   const transitioning           = useRef(false);
 
-  // Navigate — intercepts 0→1 to trigger flying-O morph
+  // Navigate — intercepts 0→1 to trigger the iris-wipe O transition
   const goTo = useCallback((target) => {
     if (idx === 0 && target === 1 && !transitioning.current) {
       transitioning.current = true;
       setFlyingO(true);
-      // Start cross-fade at same time as the O begins flying
-      setIdx(1);
+      // Delay room fade-in until the O has expanded enough to cover the screen
+      // (~750ms = 27% of 2800ms, when O is most of the way across)
+      setTimeout(() => setIdx(1), 750);
     } else {
       setIdx(target);
     }
