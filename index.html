@@ -4,66 +4,862 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>the surround · interiors · Toronto</title>
-<meta name="description" content="An interior design studio for Toronto condo owners. Sophisticated, playful, expensive — and refusing to be beige.">
+<meta name="description" content="An interior design studio for Toronto condo owners. Sophisticated, playful — and refusing to be beige.">
 <meta property="og:title" content="the surround · interiors · Toronto">
-<meta property="og:description" content="An interior design studio for Toronto condo owners. Unbeige. Ungreige.">
-<link rel="stylesheet" href="styles.css">
 <link rel="icon" href="assets/monogram-O.svg" type="image/svg+xml">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:ital,wght@0,200;0,300;0,400;0,500;1,200;1,300;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --ink: #181420; --bone: #F0EAE0; --lilac: #9B7FA6;
+  --ink-900: #0E0B16; --ink-800: #181420; --ink-700: #24202E;
+  --ink-600: #3A3447; --ink-500: #5A5266; --ink-400: #847B91;
+  --bone-50: #FBF7F0; --bone-200: #F0EAE0; --bone-300: #E7DFD0;
+  --lilac-50: #F4EFF6; --lilac-100: #E4D9E8; --lilac-200: #CDBBD4;
+  --lilac-300: #B49CBE; --lilac-400: #9B7FA6; --lilac-500: #806588;
+  --lilac-600: #634E6B; --lilac-700: #46384D;
+  --dusk: #C49A7A; --moss: #6B7A5C;
+  --fg-muted: #5A5266; --line: rgba(24,20,32,.12);
+  --font-sans: 'Sora','Helvetica Neue',system-ui,-apple-system,sans-serif;
+  --font-mono: ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --ease-out: cubic-bezier(0.22,1,0.36,1);
+  --ease-in-out: cubic-bezier(0.65,0,0.35,1);
+  --r-1:4px; --r-2:8px; --r-3:14px; --r-4:22px; --r-pill:999px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--ink-900);}
+body{color:var(--bone-50);font-family:var(--font-sans);cursor:none;-webkit-font-smoothing:antialiased;}
+
+/* cursor */
+#cursor{
+  position:fixed;z-index:9999;pointer-events:none;
+  width:24px;height:24px;border:1.5px solid rgba(251,247,240,.5);
+  border-radius:50%;transform:translate(-50%,-50%);
+  mix-blend-mode:difference;
+}
+#cursor.pressed{transform:translate(-50%,-50%) scale(0.7);}
+
+/* stage */
+.stage{position:fixed;inset:0;display:grid;grid-template-rows:64px 1fr 80px;overflow:hidden;}
+
+/* top bar */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;z-index:30;position:relative;
+}
+.brand{display:flex;align-items:baseline;gap:6px;font-weight:500;font-size:18px;
+  letter-spacing:-0.01em;color:var(--bone-50);user-select:none;cursor:pointer;}
+.brand .the{font-weight:200;font-size:12px;opacity:.6;transform:translateY(-5px);letter-spacing:.04em;}
+.brand .sep{opacity:.3;font-size:12px;margin:0 8px;}
+.brand .sub{opacity:.5;font-size:12px;font-weight:300;}
+.topbar-nav{display:flex;gap:28px;font-size:13px;}
+.topbar-nav a{color:var(--bone-50);border:0;opacity:.7;cursor:pointer;transition:opacity 200ms;}
+.topbar-nav a:hover{opacity:1;}
+
+/* scene area */
+.scene-area{position:relative;overflow:hidden;margin:0 32px;border-radius:var(--r-4);isolation:isolate;}
+.scene{position:absolute;inset:0;opacity:0;pointer-events:none;}
+
+/* room */
+.room{
+  position:absolute;inset:0;display:grid;grid-template-rows:62% 38%;
+  background:var(--wall-color,var(--ink-700));overflow:hidden;
+}
+.room .wall{background:var(--wall-color);position:relative;overflow:hidden;}
+.room .floor{
+  background:var(--floor-color,var(--ink-900));position:relative;
+  background-image:linear-gradient(180deg,rgba(0,0,0,.18),transparent 40%),linear-gradient(180deg,transparent,rgba(0,0,0,.32));
+}
+.room::before{
+  content:'';position:absolute;left:0;right:0;top:62%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent-color,var(--lilac-300)) 50%,transparent);
+  opacity:.5;z-index:5;
+}
+
+/* O-window */
+.O-window{
+  position:absolute;left:58%;top:14%;width:42%;aspect-ratio:1;
+  border:2px solid var(--accent-color,var(--bone-50));border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.18),transparent 60%),
+    linear-gradient(180deg,var(--sky-top,#2a2335) 0%,var(--sky-bot,#181420) 70%,transparent 100%);
+  z-index:2;
+}
+.O-window::after{
+  content:'';position:absolute;left:12%;right:12%;bottom:18%;height:28%;
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,.55)),
+    repeating-linear-gradient(90deg,transparent 0 16px,rgba(0,0,0,.15) 16px 17px);
+  opacity:.6;
+}
+
+/* furniture */
+.furn{position:absolute;z-index:4;}
+.furn svg{display:block;}
+
+/* hotspots */
+.hotspot{
+  position:absolute;z-index:6;width:30px;height:30px;border-radius:50%;
+  background:transparent;border:none;cursor:pointer;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform 200ms var(--ease-out);
+}
+.hotspot:hover{transform:scale(1.15) translate(-50%,-50%) !important;}
+.hotspot .pulse{
+  position:absolute;inset:0;border-radius:50%;background:rgba(251,247,240,.5);
+  opacity:.3;animation:pulse 2.4s var(--ease-out) infinite;
+}
+@keyframes pulse{0%{transform:scale(.7);opacity:.5;}60%{transform:scale(1.6);opacity:0;}100%{transform:scale(1.6);opacity:0;}}
+.hotspot .dot{
+  width:12px;height:12px;border-radius:50%;background:var(--bone-50);
+  box-shadow:0 0 0 4px rgba(240,234,224,.18);z-index:2;
+}
+.hotspot.dark .dot{background:var(--ink);box-shadow:0 0 0 4px rgba(24,20,32,.18);}
+.hotspot.dark .pulse{background:var(--ink);}
+
+/* scene label */
+.scene-label{position:absolute;left:38px;top:36px;z-index:8;color:var(--bone-50);}
+.scene-label .eyebrow{
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  opacity:.6;margin-bottom:14px;color:var(--accent-color,var(--bone-50));
+}
+.scene-label h1{
+  font-weight:200;font-size:clamp(40px,5vw,64px);
+  letter-spacing:-0.03em;line-height:1.0;color:var(--bone-50);max-width:13ch;margin:0;
+}
+.scene-label h1 em{font-style:italic;font-weight:300;color:var(--accent-color,var(--lilac-300));letter-spacing:-0.025em;}
+.scene-label p{margin-top:22px;max-width:30ch;font-size:14px;line-height:1.55;color:rgba(240,234,224,.78);}
+
+/* bottom bar */
+.bottombar{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;
+  padding:0 32px 18px;z-index:30;
+}
+.scene-now{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-50);opacity:.7;font-family:var(--font-mono);}
+.scene-now em{font-style:normal;color:var(--lilac-300);margin-right:12px;}
+.dots{display:flex;gap:8px;justify-content:center;}
+.dot-btn{
+  width:8px;height:8px;border-radius:50%;background:transparent;
+  border:1px solid var(--bone-50);opacity:.5;cursor:pointer;padding:0;
+  transition:all 200ms var(--ease-out);
+}
+.dot-btn.active{background:var(--bone-50);opacity:1;transform:scale(1.4);}
+.dot-btn:hover{opacity:.9;}
+.nav-btn{display:flex;gap:12px;justify-content:flex-end;}
+.nav-btn button{
+  background:transparent;border:1px solid rgba(240,234,224,.3);color:var(--bone-50);
+  padding:8px 18px;border-radius:var(--r-pill);cursor:pointer;
+  font-family:var(--font-sans);font-size:13px;letter-spacing:.04em;
+  transition:all 180ms var(--ease-out);
+}
+.nav-btn button:hover{background:var(--bone-50);color:var(--ink);border-color:var(--bone-50);}
+.nav-btn button:disabled{opacity:.25;cursor:not-allowed;}
+.nav-btn button.primary{background:var(--bone-50);color:var(--ink);border-color:var(--bone-50);}
+
+/* detail panel */
+.panel-mask{
+  position:fixed;inset:0;z-index:50;
+  background:rgba(14,11,22,.45);backdrop-filter:blur(4px);
+  opacity:0;pointer-events:none;
+}
+.panel{
+  position:fixed;top:0;right:0;bottom:0;width:440px;max-width:92vw;
+  background:var(--bone-200);z-index:51;
+  transform:translateX(100%);
+  display:flex;flex-direction:column;overflow-y:auto;
+}
+.panel-close{
+  position:absolute;top:16px;right:16px;width:32px;height:32px;
+  border:1px solid var(--line);border-radius:50%;background:transparent;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink);
+}
+.panel-photo{
+  height:320px;position:relative;background:var(--lilac-200);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;
+}
+.panel-photo svg{max-width:60%;max-height:60%;}
+.panel-body{padding:28px 32px 32px;color:var(--ink);}
+.panel-body .kicker{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:10px;}
+.panel-body h3{font-weight:300;font-size:30px;letter-spacing:-0.02em;margin:0 0 6px;}
+.panel-body .design{font-style:italic;font-weight:300;font-size:16px;color:var(--lilac-500);letter-spacing:-0.01em;margin-bottom:22px;}
+.panel-body .blurb{font-size:14px;line-height:1.6;color:var(--ink-700);margin-bottom:24px;}
+.panel-body .meta-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+  padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:22px;
+}
+.panel-body .meta-row .k{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:4px;}
+.panel-body .meta-row .v{font-size:14px;font-weight:500;color:var(--ink);}
+.panel-actions{display:flex;flex-direction:column;gap:10px;}
+.btn-pri,.btn-sec{
+  font-family:var(--font-sans);font-size:14px;font-weight:500;
+  padding:13px 22px;border-radius:var(--r-pill);border:0;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:space-between;
+  transition:all 180ms var(--ease-out);
+}
+.btn-pri{background:var(--ink);color:var(--bone-50);}
+.btn-pri:hover{background:var(--lilac-500);}
+.btn-sec{background:transparent;color:var(--ink);border:1px solid var(--ink);}
+.btn-sec:hover{background:var(--ink);color:var(--bone-50);}
+.arr{display:inline-block;transition:transform 200ms var(--ease-out);}
+.btn-pri:hover .arr,.btn-sec:hover .arr{transform:translateX(4px);}
+
+/* opening */
+.scene.opening{background:var(--ink-900);}
+.opening-mark{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  text-align:center;z-index:2;
+}
+.O-big{
+  width:260px;height:260px;border:2px solid rgba(240,234,224,.25);border-radius:50%;
+  margin:0 auto 28px;animation:breathe 6s var(--ease-out) infinite;
+}
+@keyframes breathe{0%,100%{transform:scale(1);}50%{transform:scale(1.025);}}
+.opening-wm{font-weight:500;font-size:48px;letter-spacing:-0.03em;color:var(--bone-50);display:flex;align-items:baseline;justify-content:center;gap:8px;}
+.opening-wm .the{font-size:20px;font-weight:200;opacity:.7;}
+.opening-sub{margin-top:20px;font-size:13px;color:rgba(240,234,224,.55);letter-spacing:.18em;text-transform:uppercase;}
+.opening-hint{margin-top:48px;font-size:11px;font-family:var(--font-mono);letter-spacing:.2em;color:rgba(155,127,166,.65);text-transform:uppercase;}
+
+/* moodboard rail */
+.moodboard-rail{position:absolute;left:38px;bottom:32px;z-index:8;display:flex;align-items:center;gap:16px;color:var(--bone-50);}
+.moodboard-rail .count{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;opacity:.6;}
+.moodboard-rail .hint{font-size:12px;opacity:.65;letter-spacing:.04em;}
+
+/* begin scene */
+.begin-content{
+  position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;gap:64px;
+  padding:56px;color:var(--bone-50);z-index:5;
+}
+.begin-content h1{font-weight:200;font-size:clamp(48px,6vw,84px);letter-spacing:-0.03em;line-height:1.0;color:var(--bone-50);margin:0;}
+.begin-content h1 em{font-style:italic;font-weight:300;color:rgba(240,234,224,.7);}
+.begin-content .lede{margin-top:24px;font-size:15px;line-height:1.65;max-width:36ch;color:rgba(240,234,224,.85);}
+.begin-form{display:flex;flex-direction:column;gap:16px;align-self:center;}
+.begin-form>div{display:flex;flex-direction:column;gap:5px;}
+.begin-form label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(240,234,224,.6);}
+.begin-form input,.begin-form textarea,.begin-form select{
+  font-family:var(--font-sans);font-size:15px;color:var(--bone-50);
+  background:transparent;border:0;border-bottom:1px solid rgba(240,234,224,.35);
+  padding:10px 0;outline:none;width:100%;
+}
+.begin-form input:focus,.begin-form textarea:focus,.begin-form select:focus{border-color:var(--bone-50);}
+.begin-form input::placeholder,.begin-form textarea::placeholder{color:rgba(240,234,224,.4);}
+.begin-form select{appearance:none;-webkit-appearance:none;cursor:pointer;}
+.begin-form select option{background:#3a2e45;color:#fff;}
+.begin-form .submit{
+  margin-top:8px;background:var(--bone-200);color:var(--lilac-700);
+  border-radius:var(--r-pill);padding:14px 22px;font-weight:500;
+  cursor:pointer;border:0;display:inline-flex;justify-content:space-between;align-items:center;
+  font-family:var(--font-sans);font-size:14px;transition:all 180ms var(--ease-out);
+}
+.begin-form .submit:hover{background:var(--bone-50);}
+
+/* vignette */
+.vignette{position:fixed;inset:0;z-index:20;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 55%,rgba(14,11,22,.55) 100%);}
+
+/* responsive */
+@media(max-width:880px){
+  .scene-label{left:22px;top:22px;right:22px;}
+  .scene-label h1{font-size:clamp(32px,9vw,52px);}
+  .begin-content{grid-template-columns:1fr;padding:32px;gap:32px;}
+  .O-window{left:35%;top:26%;width:60%;}
+  .scene-area{margin:0 16px;}
+  .topbar{padding:0 16px;}
+  .bottombar{padding:0 16px 18px;}
+  .topbar-nav{gap:16px;}
+}
+@media(max-width:580px){
+  .topbar-nav{display:none;}
+  .brand .sep,.brand .sub{display:none;}
+}
+</style>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-
-<!-- image-slot web component for user-fillable wall-art frame -->
-<script src="image-slot.js"></script>
 </head>
 <body>
 
-<!-- Custom cursor ring -->
 <div id="cursor"></div>
-
-<!-- Vignette overlay -->
 <div class="vignette"></div>
-
 <div id="app"></div>
 
-<script type="text/babel" src="tweaks-panel.jsx"></script>
-<script type="text/babel" src="Furniture.jsx"></script>
-<script type="text/babel" src="Scenes.jsx"></script>
-<script type="text/babel" src="Stage.jsx"></script>
-
 <script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ── Furniture SVG components ─────────────────────────────────────
+
+const Sofa = ({ color = '#C49A7A', leg = '#181420' }) => (
+  <svg viewBox="0 0 240 110" width="100%" height="100%">
+    <rect x="14" y="14" width="212" height="50" rx="10" fill={color} />
+    <rect x="20" y="48" width="100" height="38" rx="8" fill={color} opacity="0.85" />
+    <rect x="120" y="48" width="100" height="38" rx="8" fill={color} opacity="0.85" />
+    <rect x="0" y="36" width="22" height="56" rx="8" fill={color} opacity="0.9" />
+    <rect x="218" y="36" width="22" height="56" rx="8" fill={color} opacity="0.9" />
+    <rect x="14" y="88" width="6" height="14" fill={leg} />
+    <rect x="220" y="88" width="6" height="14" fill={leg} />
+    <circle cx="44" cy="58" r="13" fill="#F0EAE0" opacity="0.55" />
+  </svg>
+);
+
+const ArcLamp = ({ color = '#F0EAE0', pole = '#181420' }) => (
+  <svg viewBox="0 0 120 220" width="100%" height="100%">
+    <ellipse cx="100" cy="208" rx="18" ry="4" fill={pole} />
+    <path d="M100 208 L100 140 Q100 30 30 30" stroke={pole} strokeWidth="3" fill="none" strokeLinecap="round"/>
+    <ellipse cx="30" cy="36" rx="20" ry="10" fill={color} />
+    <rect x="10" y="36" width="40" height="22" fill={color} />
+    <ellipse cx="30" cy="58" rx="20" ry="10" fill={color} opacity="0.7" />
+  </svg>
+);
+
+const CoffeeTable = ({ color = '#181420', top = '#C49A7A' }) => (
+  <svg viewBox="0 0 200 70" width="100%" height="100%">
+    <ellipse cx="100" cy="20" rx="92" ry="14" fill={top} />
+    <ellipse cx="100" cy="20" rx="92" ry="14" fill="none" stroke={color} strokeWidth="1.5" />
+    <rect x="20" y="22" width="3" height="40" fill={color} />
+    <rect x="178" y="22" width="3" height="40" fill={color} />
+    <ellipse cx="100" cy="64" rx="80" ry="5" fill={color} opacity="0.18" />
+  </svg>
+);
+
+const Vase = ({ color = '#9B7FA6', stem = '#6B7A5C' }) => (
+  <svg viewBox="0 0 80 180" width="100%" height="100%">
+    <path d="M40 80 Q30 50 20 28" stroke={stem} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    <path d="M40 80 Q50 45 56 18" stroke={stem} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    <path d="M40 80 Q42 60 44 38" stroke={stem} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    <ellipse cx="20" cy="26" rx="3.5" ry="6" fill={stem} />
+    <ellipse cx="56" cy="16" rx="3.5" ry="6" fill={stem} />
+    <ellipse cx="44" cy="36" rx="3" ry="5" fill={stem} />
+    <path d="M22 84 Q14 110 22 150 L58 150 Q66 110 58 84 Z" fill={color} />
+    <ellipse cx="40" cy="84" rx="18" ry="5" fill={color} opacity="0.85" />
+  </svg>
+);
+
+const Artwork = ({ frame = '#181420', tint1 = '#9B7FA6', tint2 = '#C49A7A' }) => (
+  <svg viewBox="0 0 180 120" width="100%" height="100%">
+    <rect x="2" y="2" width="176" height="116" fill="#F0EAE0" stroke={frame} strokeWidth="2" />
+    <circle cx="60" cy="62" r="34" fill={tint1} opacity="0.85" />
+    <circle cx="110" cy="48" r="22" fill={tint2} opacity="0.9" />
+    <path d="M20 96 L160 96" stroke={frame} strokeWidth="1.2" opacity="0.4" />
+  </svg>
+);
+
+const Bed = ({ frame = '#181420', cloth = '#F0EAE0', pillow = '#CDBBD4' }) => (
+  <svg viewBox="0 0 360 140" width="100%" height="100%">
+    <rect x="0" y="0" width="360" height="34" rx="6" fill={frame} />
+    <rect x="14" y="34" width="332" height="50" rx="6" fill={cloth} />
+    <rect x="32" y="44" width="80" height="22" rx="6" fill={pillow} />
+    <rect x="120" y="44" width="80" height="22" rx="6" fill={pillow} opacity="0.85" />
+    <rect x="14" y="80" width="332" height="14" rx="4" fill={cloth} opacity="0.7" />
+    <rect x="0" y="94" width="360" height="22" rx="4" fill={frame} opacity="0.85" />
+    <rect x="4" y="116" width="6" height="20" fill={frame} />
+    <rect x="350" y="116" width="6" height="20" fill={frame} />
+  </svg>
+);
+
+const Rug = ({ color = '#9B7FA6' }) => (
+  <svg viewBox="0 0 420 80" width="100%" height="100%">
+    <ellipse cx="210" cy="40" rx="208" ry="34" fill={color} opacity="0.55" />
+    <ellipse cx="210" cy="40" rx="180" ry="28" fill="none" stroke={color} strokeWidth="1.2" opacity="0.6" />
+  </svg>
+);
+
+const Pendant = ({ color = '#C49A7A', cord = '#181420' }) => (
+  <svg viewBox="0 0 120 180" width="100%" height="100%">
+    <line x1="60" y1="0" x2="60" y2="80" stroke={cord} strokeWidth="1.5" />
+    <path d="M30 80 L90 80 L82 130 L38 130 Z" fill={color} />
+    <ellipse cx="60" cy="132" rx="22" ry="5" fill={color} opacity="0.5" />
+    <ellipse cx="60" cy="160" rx="50" ry="14" fill={color} opacity="0.18" />
+  </svg>
+);
+
+const Counter = ({ color = '#181420', top = '#C49A7A' }) => (
+  <svg viewBox="0 0 420 140" width="100%" height="100%">
+    <rect x="0" y="0" width="420" height="14" rx="3" fill={top} />
+    <rect x="0" y="14" width="420" height="106" fill={color} />
+    <line x1="140" y1="14" x2="140" y2="120" stroke="rgba(240,234,224,.18)" strokeWidth="1" />
+    <line x1="280" y1="14" x2="280" y2="120" stroke="rgba(240,234,224,.18)" strokeWidth="1" />
+    <rect x="60" y="60" width="30" height="3" rx="1" fill="#C49A7A" />
+    <rect x="200" y="60" width="30" height="3" rx="1" fill="#C49A7A" />
+    <rect x="340" y="60" width="30" height="3" rx="1" fill="#C49A7A" />
+    <rect x="0" y="120" width="420" height="20" fill="rgba(0,0,0,.25)" />
+  </svg>
+);
+
+// component registry
+const FURN = { Sofa, ArcLamp, CoffeeTable, Vase, Artwork, Bed, Rug, Pendant, Counter };
+
+// panel photo background per component
+const panelBg = (comp) => ({
+  Sofa:'#CDBBD4', ArcLamp:'#46384D', CoffeeTable:'#E7DFD0',
+  Vase:'#9B7FA6', Artwork:'#F0EAE0', Bed:'#806588',
+  Rug:'#E7DFD0', Pendant:'#24202E', Counter:'#46384D',
+}[comp] || '#E4D9E8');
+
+// ── Scene data ───────────────────────────────────────────────────
+
+const SCENES = [
+  {
+    id: 'opening', kind: 'opening', label: 'enter', mood: 'overture',
+  },
+  {
+    id: 'salon', kind: 'room', label: 'Salon',
+    mood: 'salon · lilac plaster, oak, brass',
+    eyebrow: 'A SALON IN KING WEST',
+    headline: 'A room that sits<br/><em>like a slow afternoon.</em>',
+    blurb: 'Lilac walls in lime-wash plaster, white oak underfoot, a sofa cut for actually lying on. We work with what your condo already wants to be.',
+    palette: {
+      '--wall-color':'#806588','--floor-color':'#5a4361',
+      '--accent-color':'#F0EAE0','--sky-top':'#C49A7A','--sky-bot':'#9B7FA6',
+    },
+    items: [
+      { id:'s-rug', Comp:'Rug', x:'12%', y:'74%', w:'62%', h:'20%',
+        props:{ color:'rgba(155,127,166,0.5)' },
+        hot:{ x:'35%', y:'85%' },
+        info:{ kicker:'RUG', name:"Vatsal hand-knotted wool", design:'Loloi · India · 100% wool',
+          blurb:'A heriz medallion on an olive ground — the grounding piece the room organises itself around.',
+          meta:[['Size',"5′ × 7′ 6″"],['Fibre','wool, hand-tufted'],['Pile','0.25″ medium'],['Pattern','heriz medallion']] }},
+      { id:'s-lamp', Comp:'ArcLamp', x:'0%', y:'8%', w:'12%', h:'68%',
+        props:{ color:'#F0EAE0', pole:'#181420' },
+        hot:{ x:'7%', y:'20%' },
+        info:{ kicker:'LIGHTING', name:'Luna Drop arched floor lamp', design:'brass arc · frosted glass globe · marble base',
+          blurb:'A single arc over the salon. The globe casts a warm pool without touching the ceiling.',
+          meta:[['Height','70″'],['Shade','frosted globe, ⌀ 12″'],['Base','honed white marble'],['Bulb','LED, 2700 K']] }},
+      { id:'s-art', Comp:'Artwork', x:'42%', y:'7%', w:'20%', h:'20%',
+        props:{ frame:'#F0EAE0', tint1:'#9B7FA6', tint2:'#C49A7A' },
+        hot:{ x:'51%', y:'17%' },
+        info:{ kicker:'ART', name:'Wall art — placeholder', design:'piece to be selected by client',
+          blurb:'A space held for the piece that makes the room. We source to the wall, not the other way around.',
+          meta:[['Position','above sofa'],['Suggested','~36″ × 48″'],['Frame','tbd'],['Status','placeholder']] }},
+      { id:'s-sofa', Comp:'Sofa', x:'18%', y:'44%', w:'44%', h:'36%',
+        props:{ color:'#C49A7A', leg:'#181420' },
+        hot:{ x:'38%', y:'57%' },
+        info:{ kicker:'SEATING', name:'Mara curved sofa', design:'Custom by surround · made in Mississauga',
+          blurb:'A four-seat curve in boucle, set on hand-turned oak legs. The cushions are firm enough to nap on.',
+          meta:[['Dimensions','220 × 92 cm'],['Upholstery','clay boucle'],['Lead time','11 weeks'],['Investment','from $7,200']] }},
+      { id:'s-table', Comp:'CoffeeTable', x:'30%', y:'65%', w:'28%', h:'18%',
+        props:{ color:'#181420', top:'#C49A7A' },
+        hot:{ x:'46%', y:'73%' },
+        info:{ kicker:'TABLE', name:'Walnut plinth coffee table', design:'solid walnut base · honed white marble top',
+          blurb:'Low, long, and heavy enough to anchor the rug. The marble top is honed, not polished.',
+          meta:[['Length','58″'],['Depth','28″'],['Height','15″'],['Top','honed white marble']] }},
+      { id:'s-vase', Comp:'Vase', x:'65%', y:'45%', w:'9%', h:'32%',
+        props:{ color:'#9B7FA6', stem:'#6B7A5C' },
+        hot:{ x:'69%', y:'56%' },
+        info:{ kicker:'OBJECT', name:'Eucalyptus in lilac vessel', design:'studio ceramics · stoneware, satin glaze',
+          blurb:'The one lilac moment in a room of warm oak and mustard. Refreshed with the season.',
+          meta:[['Vessel height','15″'],['Stem height','24″'],['Botanical','dusty eucalyptus'],['Glaze','satin lilac']] }},
+    ],
+  },
+  {
+    id: 'bedroom', kind: 'room', label: 'Bedroom',
+    mood: 'bedroom · sage, linen, low light',
+    eyebrow: 'A BEDROOM ON FLOOR 27',
+    headline: 'Quiet enough to hear<br/><em>the harbour at night.</em>',
+    blurb: 'Sage walls in clay paint, a low oak bed with a linen headboard, one ceramic pendant. Nothing that hums. Nothing that glows.',
+    palette: {
+      '--wall-color':'#6B7A5C','--floor-color':'#3f4a35',
+      '--accent-color':'#F0EAE0','--sky-top':'#9B7FA6','--sky-bot':'#46384D',
+    },
+    items: [
+      { id:'b-rug', Comp:'Rug', x:'10%', y:'80%', w:'55%', h:'16%',
+        props:{ color:'#F0EAE0' },
+        hot:{ x:'28%', y:'90%' },
+        info:{ kicker:'RUG', name:'Sheepskin layered runner', design:'Two natural sheepskins · via surround',
+          blurb:'A layered pair of undyed Icelandic sheepskins along the bedside.',
+          meta:[['Size','2 × 3.4 m combined'],['Fibre','sheepskin, undyed'],['Care','seasonal airing'],['Investment','from $1,800']] }},
+      { id:'b-art', Comp:'Artwork', x:'22%', y:'40%', w:'20%', h:'16%',
+        props:{ frame:'#F0EAE0', tint1:'#46384D', tint2:'#9B7FA6' },
+        hot:{ x:'31%', y:'48%' },
+        info:{ kicker:'ART', name:'"Night, harbour" — oil on canvas', design:'commissioned · Olivia Cheng',
+          blurb:'A commissioned piece sized to the headboard. One of one.',
+          meta:[['Edition','1 of 1'],['Size','72 × 48 cm'],['Frame','limed oak'],['Investment','$2,400']] }},
+      { id:'b-bed', Comp:'Bed', x:'14%', y:'57%', w:'55%', h:'30%',
+        props:{ frame:'#181420', cloth:'#F0EAE0', pillow:'#CDBBD4' },
+        hot:{ x:'32%', y:'66%' },
+        info:{ kicker:'BED', name:'Low platform bed', design:'Studio Surround · made in Prince Edward County',
+          blurb:'Solid white oak, hand-rubbed finish. The headboard wraps in heavy washed linen.',
+          meta:[['Wood','white oak, FSC'],['Size','queen / king'],['Lead time','14 weeks'],['Investment','from $5,400']] }},
+      { id:'b-pendant', Comp:'Pendant', x:'63%', y:'6%', w:'10%', h:'42%',
+        props:{ color:'#C49A7A', cord:'#181420' },
+        hot:{ x:'68%', y:'16%' },
+        info:{ kicker:'LIGHTING', name:'Brass pendant, hand-spun', design:'In Common With · NYC',
+          blurb:'A single brass cone above the side of the bed — the only fixture in the room.',
+          meta:[['Material','spun brass'],['Drop','adjustable to 120 cm'],['Bulb','E26, dim-to-warm'],['Source','via surround']] }},
+      { id:'b-vase', Comp:'Vase', x:'78%', y:'40%', w:'9%', h:'30%',
+        props:{ color:'#46384D', stem:'#C49A7A' },
+        hot:{ x:'82%', y:'50%' },
+        info:{ kicker:'OBJECT', name:'Pampas in plum vessel', design:'Vessel by surround ceramics',
+          blurb:'A reach of bleached pampas, refreshed seasonally. The vessel is glazed in deep plum.',
+          meta:[['Ceramic','stoneware, matte'],['Height','42 cm'],['Refresh','seasonal'],['Investment','from $380']] }},
+    ],
+  },
+  {
+    id: 'kitchen', kind: 'room', label: 'Kitchen',
+    mood: 'kitchen · plum walls, clay countertop, brass',
+    eyebrow: 'A KITCHEN AT DUSK',
+    headline: 'A kitchen that holds<br/><em>a real dinner.</em>',
+    blurb: 'Deep plum cabinetry. A clay-coloured stone countertop. Brass pulls warmed by every fingerprint. The lights stay low until ten.',
+    palette: {
+      '--wall-color':'#24202E','--floor-color':'#0e0b16',
+      '--accent-color':'#C49A7A','--sky-top':'#C49A7A','--sky-bot':'#46384D',
+    },
+    items: [
+      { id:'k-art', Comp:'Artwork', x:'22%', y:'32%', w:'18%', h:'16%',
+        props:{ frame:'#C49A7A', tint1:'#181420', tint2:'#9B7FA6' },
+        hot:{ x:'30%', y:'40%' },
+        info:{ kicker:'ART', name:'"Dusk over the lake" — risograph', design:'Edition of 30 · Olivia Cheng',
+          blurb:'A two-colour risograph framed in brass. The print run sold out in a week — we held three back.',
+          meta:[['Edition','12 of 30'],['Size','61 × 41 cm'],['Frame','solid brass'],['Investment','$1,100']] }},
+      { id:'k-vase', Comp:'Vase', x:'62%', y:'34%', w:'8%', h:'24%',
+        props:{ color:'#9B7FA6', stem:'#6B7A5C' },
+        hot:{ x:'66%', y:'44%' },
+        info:{ kicker:'OBJECT', name:'Herbs in dusk vessel', design:'Vessel by surround ceramics',
+          blurb:'Living rosemary in a satin-glazed stoneware pot. The kitchen smells like dinner.',
+          meta:[['Ceramic','stoneware, satin'],['Height','24 cm'],['Care','sun & weekly water'],['Investment','from $180']] }},
+      { id:'k-pendant', Comp:'Pendant', x:'35%', y:'2%', w:'10%', h:'46%',
+        props:{ color:'#C49A7A', cord:'#181420' },
+        hot:{ x:'40%', y:'12%' },
+        info:{ kicker:'LIGHTING', name:'Brass cone pendant', design:'Apparatus Studio · NYC',
+          blurb:'A single hand-spun brass cone above the island. Dimmable to 1%.',
+          meta:[['Material','solid brass'],['Drop','adjustable'],['Dim range','100 → 1%'],['Source','via surround']] }},
+      { id:'k-pendant2', Comp:'Pendant', x:'51%', y:'2%', w:'10%', h:'46%',
+        props:{ color:'#C49A7A', cord:'#181420' },
+        hot:{ x:'56%', y:'12%' },
+        info:{ kicker:'LIGHTING', name:'Brass cone, second pendant', design:'Apparatus Studio · paired',
+          blurb:'Identical to its sister. We always hang them in pairs over an island.',
+          meta:[['Material','solid brass'],['Drop','adjustable'],['Pair','always'],['Source','via surround']] }},
+      { id:'k-counter', Comp:'Counter', x:'8%', y:'52%', w:'56%', h:'38%',
+        props:{ color:'#181420', top:'#C49A7A' },
+        hot:{ x:'24%', y:'60%' },
+        info:{ kicker:'CABINETRY', name:'Plum oak island', design:'Studio Surround · joinery by Forge & Co.',
+          blurb:'Fluted white oak fronts stained deep plum, brass push-pulls, a single 10ft slab of stone on top.',
+          meta:[['Wood','rift-cut white oak'],['Stone','clay-tone Calacatta'],['Length','3 m'],['Investment','from $24,000']] }},
+    ],
+  },
+  {
+    id: 'begin', kind: 'begin', label: 'Begin', mood: 'begin · a conversation',
+  },
+];
+
+// ── Stage components ─────────────────────────────────────────────
+
+function TopBar({ onJump }) {
+  return (
+    <div className="topbar">
+      <div className="brand" onClick={() => onJump(0)}>
+        <span className="the">the</span>surround
+        <span className="sep">|</span>
+        <span className="sub">interiors · M5V Toronto</span>
+      </div>
+      <div className="topbar-nav">
+        <a onClick={() => onJump(1)}>Salon</a>
+        <a onClick={() => onJump(2)}>Bedroom</a>
+        <a onClick={() => onJump(3)}>Kitchen</a>
+        <a onClick={() => onJump(4)}>Begin</a>
+      </div>
+    </div>
+  );
+}
+
+function BottomBar({ idx, total, setIdx, scene }) {
+  const isLast = idx === total - 1;
+  return (
+    <div className="bottombar">
+      <div className="scene-now">
+        <em>{String(idx).padStart(2,'0')} / {String(total-1).padStart(2,'0')}</em>
+        {scene.mood}
+      </div>
+      <div className="dots">
+        {Array.from({ length: total }).map((_,i) => (
+          <button key={i} className={"dot-btn"+(i===idx?" active":"")} onClick={()=>setIdx(i)} aria-label={"scene "+i} />
+        ))}
+      </div>
+      <div className="nav-btn">
+        <button onClick={()=>setIdx(Math.max(0,idx-1))} disabled={idx===0}>← prev</button>
+        <button className={isLast?"primary":""} onClick={()=>setIdx(Math.min(total-1,idx+1))}>
+          {isLast ? "begin a project →" : "next →"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OpeningScene() {
+  return (
+    <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div className="opening-mark">
+        <div className="O-big" />
+        <div className="opening-wm"><span className="the">the</span>surround</div>
+        <div className="opening-sub">interior design · Toronto</div>
+        <div className="opening-hint">click anywhere to step in &nbsp;·&nbsp; → for next</div>
+      </div>
+    </div>
+  );
+}
+
+function RoomScene({ scene, onHotspot }) {
+  return (
+    <>
+      <div className="room">
+        <div className="wall"><div className="O-window" /></div>
+        <div className="floor" />
+      </div>
+
+      <div className="scene-label">
+        <div className="eyebrow">{scene.eyebrow}</div>
+        <h1 dangerouslySetInnerHTML={{ __html: scene.headline }} />
+        {scene.blurb && <p>{scene.blurb}</p>}
+      </div>
+
+      {scene.items.map((item) => {
+        const Comp = FURN[item.Comp];
+        if (!Comp) return null;
+        return (
+          <div key={item.id} className="furn" style={{ left:item.x, top:item.y, width:item.w, height:item.h }}>
+            <Comp {...item.props} />
+          </div>
+        );
+      })}
+
+      {scene.items.map((item) => (
+        <button
+          key={item.id+'-hot'}
+          className={"hotspot"+(item.hot.dark?" dark":"")}
+          style={{ left:item.hot.x, top:item.hot.y, transform:'translate(-50%,-50%)' }}
+          onClick={() => onHotspot(item)}
+          aria-label={"open "+item.info.name}
+        >
+          <span className="pulse" />
+          <span className="dot" />
+        </button>
+      ))}
+
+      <div className="moodboard-rail">
+        <span className="count">{scene.items.length} pieces</span>
+        <span className="hint">tap a dot to see the source</span>
+      </div>
+    </>
+  );
+}
+
+function BeginScene() {
+  const [sent, setSent] = useState(false);
+  return (
+    <>
+      <div className="room" style={{ background:'linear-gradient(135deg,#806588 0%,#46384D 100%)' }}>
+        <div className="wall" />
+        <div className="floor" style={{ background:'#2a1f30' }} />
+      </div>
+      <div className="begin-content">
+        <div>
+          <div className="scene-label" style={{ position:'relative', left:0, top:0 }}>
+            <div className="eyebrow" style={{ color:'rgba(240,234,224,.7)' }}>04 — BEGIN</div>
+            <h1>Tell us about<br /><em>the room.</em></h1>
+            <p className="lede">
+              Send a few photos, your floor plan if you have it, and a sentence about how the room should feel. We respond within 48 hours.
+            </p>
+          </div>
+        </div>
+        {sent ? (
+          <div style={{ alignSelf:'center', border:'1px solid rgba(240,234,224,.3)', borderRadius:14, padding:28, color:'var(--bone-50)' }}>
+            <div style={{ fontSize:10, letterSpacing:'.18em', textTransform:'uppercase', opacity:.7, marginBottom:12 }}>Received.</div>
+            <div style={{ fontStyle:'italic', fontWeight:300, fontSize:26, lineHeight:1.25, letterSpacing:'-0.02em' }}>
+              You'll hear from us by Thursday. In the meantime, look at the floor.
+            </div>
+          </div>
+        ) : (
+          <form className="begin-form" onSubmit={(e)=>{ e.preventDefault(); setSent(true); }}>
+            <div><label>Name</label><input /></div>
+            <div><label>Email</label><input type="email" /></div>
+            <div>
+              <label>The project</label>
+              <select>
+                <option>a single room</option>
+                <option>a whole condo</option>
+                <option>just moodboarding for now</option>
+              </select>
+            </div>
+            <div>
+              <label>Investment range</label>
+              <select>
+                <option>$15k – $40k</option>
+                <option>$40k – $80k</option>
+                <option>$80k +</option>
+              </select>
+            </div>
+            <div>
+              <label>A sentence about how the room should feel</label>
+              <textarea rows="2" placeholder="like a slow afternoon, but with friends over" />
+            </div>
+            <button className="submit" type="submit">send → <span className="arr">→</span></button>
+          </form>
+        )}
+      </div>
+    </>
+  );
+}
+
+function DetailPanel({ item, onClose }) {
+  const maskRef = useRef(null);
+  const panelRef = useRef(null);
+  const [content, setContent] = useState(null);
+  const open = !!item;
+
+  useEffect(() => { if (item) setContent(item); }, [item]);
+
+  useEffect(() => {
+    const mask = maskRef.current, panel = panelRef.current;
+    if (!mask || !panel) return;
+    mask.getAnimations().forEach(a => a.cancel());
+    panel.getAnimations().forEach(a => a.cancel());
+    if (open) {
+      mask.style.pointerEvents = 'auto';
+      mask.animate([{ opacity:0 },{ opacity:1 }], { duration:280, easing:'cubic-bezier(0.22,1,0.36,1)', fill:'forwards' });
+      panel.animate([{ transform:'translateX(100%)' },{ transform:'translateX(0)' }], { duration:420, easing:'cubic-bezier(0.22,1,0.36,1)', fill:'forwards' });
+    } else {
+      mask.style.pointerEvents = 'none';
+      mask.animate([{ opacity:1 },{ opacity:0 }], { duration:240, easing:'cubic-bezier(0.22,1,0.36,1)', fill:'forwards' });
+      panel.animate([{ transform:'translateX(0)' },{ transform:'translateX(100%)' }], { duration:320, easing:'cubic-bezier(0.22,1,0.36,1)', fill:'forwards' });
+      const t = setTimeout(() => setContent(null), 350);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
+  if (!content) return null;
+  const C = FURN[content.Comp];
+  return (
+    <div ref={maskRef} className="panel-mask" style={{ opacity:0, pointerEvents:'none' }} onClick={onClose}>
+      <div ref={panelRef} className="panel" style={{ transform:'translateX(100%)' }} onClick={e => e.stopPropagation()}>
+        <button className="panel-close" onClick={onClose} aria-label="close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+        <div className="panel-photo" style={{ background: panelBg(content.Comp) }}>
+          {C && <C {...content.props} />}
+        </div>
+        <div className="panel-body">
+          <div className="kicker">{content.info.kicker}</div>
+          <h3>{content.info.name}</h3>
+          <div className="design">{content.info.design}</div>
+          {content.info.blurb && <p className="blurb">{content.info.blurb}</p>}
+          <div className="meta-row">
+            {content.info.meta.map(([k,v],i) => (
+              <div key={i}><div className="k">{k}</div><div className="v">{v}</div></div>
+            ))}
+          </div>
+          <div className="panel-actions">
+            <button className="btn-pri">Save to moodboard <span className="arr">→</span></button>
+            <button className="btn-sec">We'll source for you <span className="arr">→</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SceneSlot({ scene, isActive, isBehind, children }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const targetOp = isActive ? 1 : 0;
+    const targetScale = isActive ? 1 : (isBehind ? 0.96 : 1.04);
+    const targetBlur = isActive ? 0 : 8;
+    el.getAnimations().forEach(a => a.cancel());
+    const cs = getComputedStyle(el);
+    const curOp = parseFloat(cs.opacity) || 0;
+    el.animate(
+      [
+        { opacity: curOp, transform: cs.transform === 'none' ? `scale(1)` : cs.transform, filter: cs.filter === 'none' ? 'blur(0px)' : cs.filter },
+        { opacity: targetOp, transform: `scale(${targetScale})`, filter: `blur(${targetBlur}px)` },
+      ],
+      { duration: 900, easing: 'cubic-bezier(0.22,1,0.36,1)', fill: 'forwards' }
+    );
+  }, [isActive, isBehind]);
+
+  const extraClass = scene.kind === 'opening' ? ' opening' : '';
+  return (
+    <div
+      ref={ref}
+      className={"scene" + extraClass}
+      style={{
+        ...(scene.palette || {}),
+        opacity: isActive ? 1 : 0,
+        transform: isActive ? 'scale(1)' : (isBehind ? 'scale(0.96)' : 'scale(1.04)'),
+        filter: isActive ? 'blur(0px)' : 'blur(8px)',
+        pointerEvents: isActive ? 'auto' : 'none',
+        position: 'absolute', inset: 0,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Stage() {
+  const [idx, setIdx] = useState(0);
+  const [hot, setHot] = useState(null);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (hot) { if (e.key === 'Escape') setHot(null); return; }
+      if (e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' ') { e.preventDefault(); setIdx(i=>Math.min(SCENES.length-1,i+1)); }
+      if (e.key==='ArrowLeft'||e.key==='ArrowUp') { setIdx(i=>Math.max(0,i-1)); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [hot]);
+
+  useEffect(() => {
+    if (idx !== 0) return;
+    const onClick = (e) => {
+      if (e.target.closest('.topbar')||e.target.closest('.bottombar')) return;
+      setIdx(1);
+    };
+    window.addEventListener('click', onClick);
+    return () => window.removeEventListener('click', onClick);
+  }, [idx]);
+
+  const scene = SCENES[idx];
+
+  return (
+    <div className="stage">
+      <TopBar onJump={setIdx} />
+      <div className="scene-area">
+        {SCENES.map((s, i) => (
+          <SceneSlot key={s.id} scene={s} isActive={i===idx} isBehind={i<idx}>
+            {s.kind==='opening' && <OpeningScene />}
+            {s.kind==='room'    && <RoomScene scene={s} onHotspot={setHot} />}
+            {s.kind==='begin'   && <BeginScene />}
+          </SceneSlot>
+        ))}
+      </div>
+      <BottomBar idx={idx} total={SCENES.length} setIdx={setIdx} scene={scene} />
+      <DetailPanel item={hot} onClose={()=>setHot(null)} />
+    </div>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById('app')).render(<Stage />);
 </script>
 
 <script>
-// ── Cursor follow ────────────────────────────────────────────────────────
 (function() {
   const cursor = document.getElementById('cursor');
-  let mx = -100, my = -100;
-  let cx = -100, cy = -100;
-  let raf;
-
-  document.addEventListener('mousemove', (e) => {
-    mx = e.clientX;
-    my = e.clientY;
-  });
-
+  let mx = -100, my = -100, cx = -100, cy = -100;
+  document.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; });
   document.addEventListener('mousedown', () => cursor.classList.add('pressed'));
-  document.addEventListener('mouseup',   () => cursor.classList.remove('pressed'));
-
-  document.addEventListener('mouseleave', () => {
-    mx = -200; my = -200;
-  });
-
-  function lerp(a, b, t) { return a + (b - a) * t; }
-
-  function tick() {
-    cx = lerp(cx, mx, 0.18);
-    cy = lerp(cy, my, 0.18);
-    cursor.style.left = cx + 'px';
-    cursor.style.top  = cy + 'px';
-    raf = requestAnimationFrame(tick);
+  document.addEventListener('mouseup', () => cursor.classList.remove('pressed'));
+  document.addEventListener('mouseleave', () => { mx = -200; my = -200; });
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function tick(){
+    cx=lerp(cx,mx,.18); cy=lerp(cy,my,.18);
+    cursor.style.left=cx+'px'; cursor.style.top=cy+'px';
+    requestAnimationFrame(tick);
   }
   tick();
 })();
