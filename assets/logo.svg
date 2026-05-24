@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" fill="none">
+  
+  <circle cx="240" cy="320" r="200" stroke="currentColor" stroke-width="14" fill="none"></circle>
+  
+  <text x="372" y="266" font-family="&#39;Sora&#39;, &#39;Helvetica Neue&#39;, sans-serif" font-weight="200" font-size="56" letter-spacing="0.5" fill="currentColor">the</text>
+  
+  <text x="172" y="362" font-family="&#39;Sora&#39;, &#39;Helvetica Neue&#39;, sans-serif" font-weight="500" font-size="110" letter-spacing="-1" fill="currentColor">surr</text>
+  <text x="362" y="362" font-family="&#39;Sora&#39;, &#39;Helvetica Neue&#39;, sans-serif" font-weight="500" font-size="110" letter-spacing="-1" fill="currentColor">und</text>
+</svg>

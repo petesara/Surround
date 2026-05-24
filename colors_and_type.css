@@ -1,0 +1,203 @@
+/* ──────────────────────────────────────────────────────────────
+   the Surround — design tokens
+   Colors: anchored on three brand pillars — INK, BONE, LILAC.
+           NOT beige. NOT greige. The whole point.
+   Type:   Sora throughout — Light Italic carries editorial moments.
+           No serif. Cleaner lines.
+   ────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400&display=swap');
+
+:root {
+  /* ── Brand anchors ─────────────────────────────────── */
+  --ink:        #181420;   /* deep plum-black. The "O" stroke. */
+  --bone:       #F0EAE0;   /* warm cream. The unbeige. */
+  --lilac:      #9B7FA6;   /* dusty mauve. The ungreige.       */
+
+  /* ── Ink scale (cool plum-black) ───────────────────── */
+  --ink-900:    #0E0B16;
+  --ink-800:    #181420;   /* = --ink */
+  --ink-700:    #24202E;
+  --ink-600:    #3A3447;
+  --ink-500:    #5A5266;
+  --ink-400:    #847B91;
+  --ink-300:    #B0A8B8;
+  --ink-200:    #D6D0DC;
+  --ink-100:    #ECE7EF;
+
+  /* ── Bone scale (warm cream, unbeige) ──────────────── */
+  --bone-50:    #FBF7F0;
+  --bone-100:   #F6F1E7;
+  --bone-200:   #F0EAE0;   /* = --bone */
+  --bone-300:   #E7DFD0;
+  --bone-400:   #D9CFBC;
+  --bone-500:   #BFB3A0;
+
+  /* ── Lilac scale (the ungreige accent) ─────────────── */
+  --lilac-50:   #F4EFF6;
+  --lilac-100:  #E4D9E8;
+  --lilac-200:  #CDBBD4;
+  --lilac-300:  #B49CBE;
+  --lilac-400:  #9B7FA6;   /* = --lilac */
+  --lilac-500:  #806588;
+  --lilac-600:  #634E6B;
+  --lilac-700:  #46384D;
+
+  /* ── Quiet supporting accents (used sparingly) ─────── */
+  --dusk:       #C49A7A;   /* warm clay-rose, for one-off pops */
+  --moss:       #6B7A5C;   /* deep olive, used very rarely     */
+
+  /* ── Semantic surfaces ─────────────────────────────── */
+  --bg:               var(--bone-200);
+  --bg-elev:          var(--bone-50);
+  --bg-inverse:       var(--ink-800);
+  --bg-tint-lilac:    var(--lilac-50);
+  --bg-tint-deep:     var(--lilac-700);
+
+  --fg:               var(--ink-800);
+  --fg-muted:         var(--ink-500);
+  --fg-soft:          var(--ink-400);
+  --fg-on-ink:        var(--bone-200);
+  --fg-on-lilac:      var(--bone-50);
+
+  --line:             rgba(24, 20, 32, 0.12);
+  --line-strong:      rgba(24, 20, 32, 0.28);
+  --line-on-ink:      rgba(240, 234, 224, 0.16);
+
+  /* States */
+  --hover-overlay:    rgba(24, 20, 32, 0.06);
+  --press-overlay:    rgba(24, 20, 32, 0.10);
+  --focus-ring:       var(--lilac-400);
+
+  /* Semantic */
+  --success:          #6B7A5C;
+  --warn:             #C49A7A;
+  --danger:           #A24B4B;
+
+  /* ── Type families ─────────────────────────────────── */
+  --font-sans:   'Sora', 'Helvetica Neue', system-ui, -apple-system, sans-serif;
+  --font-serif:  'Sora', 'Helvetica Neue', system-ui, sans-serif; /* deprecated alias — kept for back-compat. Use .editorial class instead. */
+  --font-mono:   ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ── Type scale (fluid where it matters) ───────────── */
+  --t-eyebrow:   0.6875rem;   /* 11px — uppercase micro labels  */
+  --t-meta:      0.8125rem;   /* 13px — captions, fine print    */
+  --t-body-sm:   0.875rem;    /* 14px                            */
+  --t-body:      1rem;        /* 16px                            */
+  --t-body-lg:   1.125rem;    /* 18px — long-form reading       */
+  --t-h6:        1.125rem;    /* 18px                            */
+  --t-h5:        1.375rem;    /* 22px                            */
+  --t-h4:        1.75rem;     /* 28px                            */
+  --t-h3:        2.25rem;     /* 36px                            */
+  --t-h2:        clamp(2.5rem, 4vw + 1rem, 4rem);     /* 40–64 */
+  --t-h1:        clamp(3.5rem, 7vw + 1rem, 7.5rem);   /* 56–120 */
+  --t-hero:      clamp(5rem,  11vw + 1rem, 14rem);    /* editorial */
+
+  /* Tracking — Sora wants tightening at display sizes */
+  --track-tight:  -0.025em;
+  --track-snug:   -0.01em;
+  --track-normal: 0;
+  --track-loose:  0.06em;     /* eyebrows / all-caps */
+  --track-wide:   0.18em;     /* small caps moments  */
+
+  /* Leading */
+  --lh-tight:    1.02;
+  --lh-snug:     1.15;
+  --lh-normal:   1.4;
+  --lh-relaxed:  1.55;
+
+  /* ── Spacing (4pt base, generous) ──────────────────── */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  24px;
+  --s-6:  32px;
+  --s-7:  48px;
+  --s-8:  64px;
+  --s-9:  96px;
+  --s-10: 128px;
+
+  /* ── Radii — softly rounded, never bubbly ──────────── */
+  --r-1:    4px;
+  --r-2:    8px;
+  --r-3:    14px;    /* default card radius */
+  --r-4:    22px;
+  --r-pill: 999px;
+
+  /* ── Shadows — diffuse, warm, never harsh ──────────── */
+  --shadow-1:  0 1px 2px rgba(24,20,32,0.05);
+  --shadow-2:  0 6px 18px -8px rgba(24,20,32,0.12), 0 2px 4px rgba(24,20,32,0.04);
+  --shadow-3:  0 22px 50px -20px rgba(24,20,32,0.25), 0 4px 10px rgba(24,20,32,0.06);
+  --shadow-lilac: 0 22px 60px -24px rgba(99, 78, 107, 0.45);
+
+  /* ── Motion ────────────────────────────────────────── */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --d-fast:      150ms;
+  --d-base:      280ms;
+  --d-slow:      520ms;
+  --d-cinematic: 900ms;
+
+  /* ── Layout ────────────────────────────────────────── */
+  --container:        1280px;
+  --container-narrow: 880px;
+  --gutter:           24px;
+}
+
+/* ── Element defaults ──────────────────────────────── */
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  line-height: var(--lh-relaxed);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
+  color: var(--fg);
+  margin: 0;
+  text-wrap: balance;
+}
+h1 { font-size: var(--t-h1); font-weight: 200; }
+h2 { font-size: var(--t-h2); font-weight: 200; }
+h3 { font-size: var(--t-h3); font-weight: 300; letter-spacing: var(--track-snug); }
+h4 { font-size: var(--t-h4); font-weight: 400; letter-spacing: var(--track-snug); }
+h5 { font-size: var(--t-h5); font-weight: 500; letter-spacing: 0; }
+h6 { font-size: var(--t-h6); font-weight: 500; letter-spacing: 0; }
+
+.editorial,
+.serif {
+  font-family: var(--font-sans);
+  font-style: italic;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+}
+
+.eyebrow {
+  font-size: var(--t-eyebrow);
+  font-weight: 500;
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+p { margin: 0; max-width: 60ch; text-wrap: pretty; }
+small, .meta { font-size: var(--t-meta); color: var(--fg-muted); }
+
+a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+  transition: opacity var(--d-fast) var(--ease-out);
+}
+a:hover { opacity: 0.6; }
+
+::selection { background: var(--lilac-200); color: var(--ink-800); }
