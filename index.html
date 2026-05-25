@@ -643,24 +643,43 @@ function FlyingO({ active, onDone }) {
     if (!el) return;
 
     const vw = window.innerWidth, vh = window.innerHeight;
-    // Diameter large enough to cover the full viewport from any point
-    const diagonal = Math.ceil(Math.sqrt(vw * vw + vh * vh)) * 1.08;
-    const oBigSize  = vw <= 580 ? 200 : 260;
 
-    // Center the large circle over the viewport
+    // Find the O-big's actual rendered center — it sits above vh/2 because the
+    // whole mark block (O + wordmark + subtitle + hint) is flex-centered as a unit.
+    const oBigEl = document.querySelector('.O-big');
+    let oCx = vw / 2, oCy = vh / 2;
+    let oBigSize = vw <= 580 ? 190 : 260;
+    if (oBigEl) {
+      const r = oBigEl.getBoundingClientRect();
+      oCx = r.left + r.width  / 2;
+      oCy = r.top  + r.height / 2;
+      oBigSize = r.width;
+    }
+
+    // Diameter must cover the whole viewport from this center point:
+    // the circle needs to reach the farthest viewport corner.
+    const farthest = Math.max(
+      Math.hypot(oCx, oCy),
+      Math.hypot(vw - oCx, oCy),
+      Math.hypot(oCx, vh - oCy),
+      Math.hypot(vw - oCx, vh - oCy)
+    );
+    const diameter = farthest * 2 * 1.06; // 6 % margin so no gap at edges
+
+    // Position the flying O centred exactly over the O-big
     Object.assign(el.style, {
-      width:  diagonal + 'px',
-      height: diagonal + 'px',
-      left:   (vw / 2 - diagonal / 2) + 'px',
-      top:    (vh / 2 - diagonal / 2) + 'px',
+      width:  diameter + 'px',
+      height: diameter + 'px',
+      left:   (oCx - diameter / 2) + 'px',
+      top:    (oCy - diameter / 2) + 'px',
       opacity: '0',
-      transform: `scale(${oBigSize / diagonal})`,
+      transform: `scale(${oBigSize / diameter})`,
     });
 
     const anim = el.animate([
-      // snap on
-      { transform: `scale(${oBigSize / diagonal})`,       opacity: 0,    offset: 0 },
-      { transform: `scale(${oBigSize / diagonal})`,       opacity: 0.96, offset: 0.035 },
+      // snap on at O-big size
+      { transform: `scale(${oBigSize / diameter})`,       opacity: 0,    offset: 0 },
+      { transform: `scale(${oBigSize / diameter})`,       opacity: 0.96, offset: 0.035 },
       // expand to fill screen
       { transform: 'scale(1)',                            opacity: 0.97, offset: 0.46 },
       // hold
