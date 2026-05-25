@@ -833,7 +833,7 @@ function Modal({ item, pos, onClose }) {
       );
       a.addEventListener('finish', () => setContent(null));
     }
-  }, [open]);
+  }, [open, content]);
 
   if (!content) return null;
   const C = FURN[content.Comp];
