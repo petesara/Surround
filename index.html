@@ -419,6 +419,7 @@ body{color:#FBF7F0;font-family:var(--font-sans);cursor:none;-webkit-font-smoothi
 }
 </style>
 
+<script src="https://unpkg.com/three@0.160.1/build/three.min.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -921,32 +922,26 @@ function OpeningScene() {
   );
 }
 
+// ── Flat CSS room for non-salon scenes ──────────────────────────
 function RoomScene({ scene, onHotspot, isActive }) {
   const veilRef = useRef(null);
-
   useEffect(() => {
     const el = veilRef.current;
     if (!el) return;
     if (isActive) {
       el.getAnimations().forEach(a => a.cancel());
       el.style.opacity = '1';
-      el.animate(
-        [{ opacity: 1 }, { opacity: 0 }],
-        { duration: 1600, delay: 380, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'forwards' }
-      );
+      el.animate([{ opacity:1 },{ opacity:0 }],
+        { duration:1600, delay:380, easing:'cubic-bezier(0.65,0,0.35,1)', fill:'forwards' });
     } else {
       el.getAnimations().forEach(a => a.cancel());
       el.style.opacity = '1';
     }
   }, [isActive]);
-
   return (
     <>
       <div className="room">
-        <div className="wall">
-          <div className="O-window-glow"/>
-          <div className="O-window"/>
-        </div>
+        <div className="wall"><div className="O-window-glow"/><div className="O-window"/></div>
         <div className="floor"/>
       </div>
       <div className="room-veil" ref={veilRef}/>
@@ -956,31 +951,302 @@ function RoomScene({ scene, onHotspot, isActive }) {
         {scene.blurb && <p>{scene.blurb}</p>}
       </div>
       {scene.items.map(item => {
-        const C = FURN[item.Comp];
-        if (!C) return null;
-        const maskStyle = item.mask
-          ? { WebkitMaskImage:item.mask, maskImage:item.mask, WebkitMaskSize:'100% 100%', maskSize:'100% 100%' }
-          : {};
+        const C = FURN[item.Comp]; if (!C) return null;
+        const maskStyle = item.mask ? { WebkitMaskImage:item.mask, maskImage:item.mask, WebkitMaskSize:'100% 100%', maskSize:'100% 100%' } : {};
         return (
-          <div key={item.id} className="furn"
-               style={{ left:item.x, top:item.y, width:item.w, height:item.h, ...maskStyle }}>
+          <div key={item.id} className="furn" style={{ left:item.x, top:item.y, width:item.w, height:item.h, ...maskStyle }}>
             <C {...item.props}/>
           </div>
         );
       })}
       {scene.items.map(item => (
-        <button
-          key={item.id+'-hot'}
-          className={"hotspot"+(item.hot.dark?" dark":"")}
+        <button key={item.id+'-hot'} className={"hotspot"+(item.hot.dark?" dark":"")}
           style={{ left:item.hot.x, top:item.hot.y }}
-          onClick={e => {
-            const r = e.currentTarget.getBoundingClientRect();
-            onHotspot(item, { x: r.left + r.width/2, y: r.top + r.height/2 });
-          }}
-          aria-label={"open "+item.info.name}
-        >
-          <span className="pulse"/>
-          <span className="dot"/>
+          onClick={e => { const r=e.currentTarget.getBoundingClientRect(); onHotspot(item,{ x:r.left+r.width/2, y:r.top+r.height/2 }); }}
+          aria-label={"open "+item.info.name}>
+          <span className="pulse"/><span className="dot"/>
+        </button>
+      ))}
+      <div className="moodboard-rail">
+        <span className="count">{scene.items.length} pieces</span>
+        <span className="hint">tap a dot to see the source</span>
+      </div>
+    </>
+  );
+}
+
+// ── Three.js salon scene ─────────────────────────────────────────
+function SalonThreeScene({ scene, onHotspot, isActive }) {
+  const mountRef = useRef(null);
+  const veilRef  = useRef(null);
+  const threeRef = useRef(null);
+
+  // Init Three.js once
+  useEffect(() => {
+    const THREE = window.THREE;
+    if (!THREE) return;
+    const mount = mountRef.current;
+    const W = mount.clientWidth || 900;
+    const H = mount.clientHeight || 540;
+
+    // ── Renderer ──
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(W, H);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.inset = '0';
+    mount.appendChild(renderer.domElement);
+
+    // ── Scene ──
+    const s = new THREE.Scene();
+    s.background = new THREE.Color(0x806588);
+    s.fog = new THREE.FogExp2(0x3a1f44, 0.045);
+
+    // ── Camera — 3/4 view ──
+    const cam = new THREE.PerspectiveCamera(42, W/H, 0.1, 60);
+    cam.position.set(1.8, 2.2, 7.8);
+    cam.lookAt(0, 1.4, 0);
+
+    // ── Lights ──
+    s.add(new THREE.AmbientLight(0xB090C8, 0.55));
+
+    const sunLight = new THREE.DirectionalLight(0xFFE4B0, 2.2);
+    sunLight.position.set(5, 6, 7);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(2048, 2048);
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far  = 40;
+    sunLight.shadow.camera.left = -8; sunLight.shadow.camera.right = 8;
+    sunLight.shadow.camera.top  =  6; sunLight.shadow.camera.bottom = -6;
+    sunLight.shadow.bias = -0.0005;
+    s.add(sunLight);
+
+    const lampLight = new THREE.PointLight(0xFFAA44, 3.5, 5.5, 2);
+    lampLight.position.set(-4.0, 2.9, 2.2);
+    lampLight.castShadow = true;
+    lampLight.shadow.mapSize.set(512, 512);
+    s.add(lampLight);
+
+    const fillLight = new THREE.DirectionalLight(0x9070A8, 0.4);
+    fillLight.position.set(-4, 3, 5);
+    s.add(fillLight);
+
+    // ── Materials ──
+    const wallMat  = new THREE.MeshStandardMaterial({ color:0x806588, roughness:0.88, metalness:0.04 });
+    const sideWall = new THREE.MeshStandardMaterial({ color:0x6b4d72, roughness:0.88, metalness:0.04 });
+    const floorMat = new THREE.MeshStandardMaterial({ color:0x4e3659, roughness:0.92, metalness:0.02 });
+    const ceilMat  = new THREE.MeshStandardMaterial({ color:0x22152e, roughness:1.0 });
+
+    // ── Room geometry ──
+    function addPlane(geo, mat, px, py, pz, rx, ry) {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(px, py, pz);
+      if (rx) m.rotation.x = rx;
+      if (ry) m.rotation.y = ry;
+      m.receiveShadow = true;
+      s.add(m); return m;
+    }
+
+    addPlane(new THREE.PlaneGeometry(14, 6), wallMat,  0, 3, -1);            // back wall
+    addPlane(new THREE.PlaneGeometry(12, 6), sideWall, -6, 3, 5, 0,  Math.PI/2); // left wall
+    addPlane(new THREE.PlaneGeometry(12, 6), sideWall,  6, 3, 5, 0, -Math.PI/2); // right wall
+    addPlane(new THREE.PlaneGeometry(14, 14), floorMat, 0, 0, 5, -Math.PI/2);    // floor
+    addPlane(new THREE.PlaneGeometry(14, 14), ceilMat,  0, 6, 5,  Math.PI/2);    // ceiling
+
+    // ── O-window (right wall) ──
+    const winMat = new THREE.MeshBasicMaterial({ color:0xFFE8A0 });
+    const win = new THREE.Mesh(new THREE.CircleGeometry(0.88, 40), winMat);
+    win.position.set(5.92, 3.5, 1.8);
+    win.rotation.y = -Math.PI/2;
+    s.add(win);
+    const rimMat = new THREE.MeshBasicMaterial({ color:0xF0EAE0, side:THREE.FrontSide });
+    const rim = new THREE.Mesh(new THREE.RingGeometry(0.88, 0.93, 40), rimMat);
+    rim.position.set(5.9, 3.5, 1.8);
+    rim.rotation.y = -Math.PI/2;
+    s.add(rim);
+    // Window glow
+    const winGlow = new THREE.PointLight(0xFFD080, 1.6, 5, 2);
+    winGlow.position.set(4.5, 3.5, 1.8);
+    s.add(winGlow);
+
+    // ── Furniture helper ──
+    const loader = new THREE.TextureLoader();
+    function loadTex(src) {
+      const t = loader.load(src);
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    }
+
+    function boxFurn(texSrc, w, h, d, x, y, z, sideColor, ry=0) {
+      const tex = loadTex(texSrc);
+      const front = new THREE.MeshStandardMaterial({ map:tex, roughness:0.75 });
+      const side  = new THREE.MeshStandardMaterial({ color:sideColor, roughness:0.85 });
+      const top   = new THREE.MeshStandardMaterial({ color:new THREE.Color(sideColor).multiplyScalar(0.75), roughness:0.9 });
+      // BoxGeo face order: +x, -x, +y, -y, +z (front), -z (back)
+      const mats  = [side, side, top, side, front, side];
+      const mesh  = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats);
+      mesh.position.set(x, y + h/2, z);
+      mesh.rotation.y = ry;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      s.add(mesh); return mesh;
+    }
+
+    // ── Rug ──
+    const rugMat = new THREE.MeshStandardMaterial({ color:0x9B7FA6, roughness:0.95, transparent:true, opacity:0.65 });
+    const rug = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 2.8), rugMat);
+    rug.rotation.x = -Math.PI/2;
+    rug.position.set(0.3, 0.01, 3.2);
+    rug.receiveShadow = true;
+    s.add(rug);
+
+    // ── Console (against back wall, left of centre) ──
+    const consoleMesh = boxFurn(IMG_CONSOLE, 3.6, 0.68, 0.5, -2.2, 0, 0.25, 0x5a4030);
+
+    // ── Sofa ──
+    const sofaMesh = boxFurn(IMG_SOFA, 3.1, 0.88, 1.5, -0.5, 0, 2.5, 0xB09050);
+    // sofa back cushion slab
+    const sofaBack = new THREE.Mesh(
+      new THREE.BoxGeometry(3.1, 0.6, 0.18),
+      new THREE.MeshStandardMaterial({ color:0xA08040, roughness:0.8 })
+    );
+    sofaBack.position.set(-0.5, 1.08, 1.84);
+    sofaBack.castShadow = true; sofaBack.receiveShadow = true;
+    s.add(sofaBack);
+
+    // ── Chair ──
+    const chairMesh = boxFurn(IMG_CHAIR, 1.1, 0.82, 1.0, 2.8, 0, 2.4, 0xCCBB90);
+    const chairBack = new THREE.Mesh(
+      new THREE.BoxGeometry(1.1, 0.55, 0.16),
+      new THREE.MeshStandardMaterial({ color:0xBBAA80, roughness:0.8 })
+    );
+    chairBack.position.set(2.8, 1.08, 1.97);
+    chairBack.castShadow = true; chairBack.receiveShadow = true;
+    s.add(chairBack);
+
+    // ── Coffee table ──
+    const tableMesh = boxFurn(IMG_TABLE, 2.0, 0.40, 1.15, 0.5, 0, 3.6, 0x907860);
+    // table legs
+    [[0.85,0.55],[0.85,1.45],[-0.85,0.55],[-0.85,1.45]].forEach(([ox,oz]) => {
+      const leg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, 0.36, 8),
+        new THREE.MeshStandardMaterial({ color:0x6a5030, roughness:0.7, metalness:0.2 })
+      );
+      leg.position.set(0.5+ox, 0.18, 3.6-0.575+oz);
+      leg.castShadow = true;
+      s.add(leg);
+    });
+
+    // ── Arc lamp ──
+    const brassM = new THREE.MeshStandardMaterial({ color:0xC8A030, roughness:0.25, metalness:0.9 });
+    const marbleM = new THREE.MeshStandardMaterial({ color:0xE0D8CC, roughness:0.35, metalness:0.08 });
+    // base
+    const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.32,0.14,20), marbleM);
+    lampBase.position.set(-4.2, 0.07, 2.2);
+    lampBase.castShadow = true; s.add(lampBase);
+    // pole
+    const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,2.3,8), brassM);
+    lampPole.position.set(-4.2, 1.29, 2.2);
+    lampPole.castShadow = true; s.add(lampPole);
+    // arc arm via QuadraticBezierCurve3
+    const arc = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(-4.2, 2.44, 2.2),
+      new THREE.Vector3(-3.5, 2.85, 2.0),
+      new THREE.Vector3(-2.9, 2.55, 2.0)
+    );
+    const armMesh = new THREE.Mesh(new THREE.TubeGeometry(arc, 14, 0.028, 8, false), brassM);
+    armMesh.castShadow = true; s.add(armMesh);
+    // globe
+    const globeM = new THREE.MeshStandardMaterial({
+      color:0xFFF6D0, emissive:0xFFCC44, emissiveIntensity:1.2,
+      roughness:0.15, transparent:true, opacity:0.88
+    });
+    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.24,20,20), globeM);
+    globe.position.set(-2.9, 2.52, 2.0);
+    s.add(globe);
+
+    // ── Raycasting clickable objects ──
+    const clickMap = [
+      { mesh:consoleMesh, item: scene.items.find(i=>i.id==='s-console') },
+      { mesh:sofaMesh,    item: scene.items.find(i=>i.id==='s-sofa') },
+      { mesh:chairMesh,   item: scene.items.find(i=>i.id==='s-chair') },
+      { mesh:tableMesh,   item: scene.items.find(i=>i.id==='s-table') },
+      { mesh:lampBase,    item: scene.items.find(i=>i.id==='s-lamp') },
+    ];
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function onClick(e) {
+      const rect = mount.getBoundingClientRect();
+      mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+      mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, cam);
+      const hits = raycaster.intersectObjects(clickMap.map(c=>c.mesh), false);
+      if (hits.length) {
+        const found = clickMap.find(c => c.mesh === hits[0].object);
+        if (found?.item) onHotspot(found.item, { x:e.clientX, y:e.clientY });
+      }
+    }
+    renderer.domElement.addEventListener('click', onClick);
+
+    // ── Resize ──
+    const ro = new ResizeObserver(() => {
+      const W2 = mount.clientWidth, H2 = mount.clientHeight;
+      cam.aspect = W2/H2; cam.updateProjectionMatrix();
+      renderer.setSize(W2, H2);
+    });
+    ro.observe(mount);
+
+    // ── Render loop ──
+    let raf;
+    const animate = () => { raf = requestAnimationFrame(animate); renderer.render(s, cam); };
+    animate();
+
+    threeRef.current = { renderer, raf, ro, onClick };
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      renderer.domElement.removeEventListener('click', onClick);
+      renderer.dispose();
+      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
+    };
+  }, []);
+
+  // ── Veil animation ──
+  useEffect(() => {
+    const el = veilRef.current;
+    if (!el) return;
+    if (isActive) {
+      el.getAnimations().forEach(a => a.cancel());
+      el.style.opacity = '1';
+      el.animate([{ opacity:1 },{ opacity:0 }],
+        { duration:1600, delay:380, easing:'cubic-bezier(0.65,0,0.35,1)', fill:'forwards' });
+    } else {
+      el.getAnimations().forEach(a => a.cancel());
+      el.style.opacity = '1';
+    }
+  }, [isActive]);
+
+  return (
+    <>
+      <div ref={mountRef} style={{ position:'absolute', inset:0 }}/>
+      <div className="room-veil" ref={veilRef}/>
+      <div className="scene-label">
+        <div className="eyebrow">{scene.eyebrow}</div>
+        <h1 dangerouslySetInnerHTML={{ __html: scene.headline }}/>
+        {scene.blurb && <p>{scene.blurb}</p>}
+      </div>
+      {scene.items.map(item => (
+        <button key={item.id+'-hot'} className={"hotspot"+(item.hot.dark?" dark":"")}
+          style={{ left:item.hot.x, top:item.hot.y }}
+          onClick={e => { const r=e.currentTarget.getBoundingClientRect(); onHotspot(item,{ x:r.left+r.width/2, y:r.top+r.height/2 }); }}
+          aria-label={"open "+item.info.name}>
+          <span className="pulse"/><span className="dot"/>
         </button>
       ))}
       <div className="moodboard-rail">
@@ -1172,7 +1438,8 @@ function Stage() {
         {SCENES.map((s,i) => (
           <SceneSlot key={s.id} scene={s} isActive={i===idx} isBehind={i<idx}>
             {s.kind==='opening' && <OpeningScene/>}
-            {s.kind==='room'    && <RoomScene scene={s} isActive={i===idx} onHotspot={(item,pos)=>{ setHot(item); setHotPos(pos); }}/>}
+            {s.kind==='room' && s.id==='salon' && <SalonThreeScene scene={s} isActive={i===idx} onHotspot={(item,pos)=>{ setHot(item); setHotPos(pos); }}/>}
+            {s.kind==='room' && s.id!=='salon' && <RoomScene scene={s} isActive={i===idx} onHotspot={(item,pos)=>{ setHot(item); setHotPos(pos); }}/>}
             {s.kind==='begin'   && <BeginScene/>}
           </SceneSlot>
         ))}
