@@ -1076,82 +1076,110 @@ function SalonThreeScene({ scene, onHotspot, isActive }) {
     const rugO=mk(new THREE.PlaneGeometry(4.2,3.1),M(0x9B7FA6,0.95,0,{transparent:true,opacity:0.55}));
     rugO.rotation.x=-Math.PI/2; rugO.position.set(-0.2,0.006,3.0); rugO.receiveShadow=true; sc.add(rugO);
 
-    // ═══ CONSOLE — long cerused-oak credenza · brass pulls · hairpin legs
+    function taperLeg(bot,top,ht,m){ return mk(new THREE.CylinderGeometry(top,bot,ht,8),m); }
+
+    // ═══ CONSOLE — dark walnut cabinet · raised-panel doors · brass knobs ──────────
     const cItem=scene.items.find(i=>i.id==='s-console'); const cGrp=grp(cItem);
-    const cOD=M(0x180E06,0.84), cOM=M(0x261808,0.82), cBr=M(0xC8A028,0.22,0.94);
-    put(cGrp,mk(bx(3.5,0.62,0.44),cOD),0,0.37,0);
-    put(cGrp,mk(bx(3.54,0.030,0.46),cOM),0,0.685,0);
-    for(let i=0;i<4;i++){
-      put(cGrp,mk(bx(0.78,0.52,0.022),cOM),-1.31+i*0.875,0.37,0.232);
-      if(i<3) put(cGrp,mk(bx(0.018,0.54,0.026),cOD),-1.31+i*0.875+0.44,0.37,0.233);
-      const pl=mk(cy(0.010,0.010,0.18,8),cBr); pl.rotation.z=Math.PI/2;
-      put(cGrp,pl,-1.31+i*0.875,0.37,0.247);
-    }
-    [[-1.60,-0.16],[-1.60,0.16],[1.60,-0.16],[1.60,0.16]].forEach(([lx,lz])=>
-      put(cGrp,mk(bx(0.040,0.15,0.040),cOD),lx,0.075,lz));
+    const cWd=M(0x3C1F0E,0.82,0.04), cWdL=M(0x5C3520,0.78,0.05);
+    const cBr=M(0xBE9225,0.22,0.90), cTp=M(0xD4C8B0,0.36,0.08);
+    // Body
+    put(cGrp,mk(bx(3.20,0.62,0.44),cWd),0,0.37,0);
+    // Stone top slab
+    put(cGrp,mk(bx(3.26,0.040,0.48),cTp),0,0.695,0);
+    // 2 raised-panel doors
+    [[-0.82],[0.82]].forEach(([dx])=>{
+      put(cGrp,mk(bx(1.44,0.54,0.022),cWdL),dx,0.37,0.228);
+      put(cGrp,mk(bx(1.12,0.40,0.016),cWd),dx,0.37,0.240);
+      const knb=mk(new THREE.SphereGeometry(0.018,10,8),cBr);
+      put(cGrp,knb,dx>0?dx-0.52:dx+0.52,0.37,0.252);
+    });
+    // Base rail + 4 tapered feet
+    put(cGrp,mk(bx(3.22,0.06,0.44),cWd),0,0.06,0);
+    [[-1.48,-0.16],[-1.48,0.16],[1.48,-0.16],[1.48,0.16]].forEach(([lx,lz])=>
+      put(cGrp,taperLeg(0.038,0.026,0.12,cWd),lx,0.060,lz));
     cGrp.position.set(-2.2,0,0.22);
 
-    // ═══ SOFA — honey-mustard boucle · sphere-pillow cushions · sled base
+    // ═══ SOFA — kidney curved back · deep plum velvet · tapered walnut legs ────────────
     const sItem=scene.items.find(i=>i.id==='s-sofa'); const sGrp=grp(sItem);
-    const sB=M(0xC49A28,0.94), sBd=M(0x9A7410,0.96), sMt=M(0x141008,0.58,0.52);
-    put(sGrp,mk(bx(3.16,0.16,1.46),sBd),0,0.08,0);
-    for(let i=0;i<3;i++) put(sGrp,pillow(0.92,0.30,1.36,sB),-1.04+i*1.04,0.38,0.04);
-    put(sGrp,mk(bx(3.16,0.54,0.16),sBd),0,0.62,-0.65);
-    for(let i=0;i<3;i++) put(sGrp,pillow(0.90,0.56,0.14,sB),-1.04+i*1.04,0.62,-0.635);
-    put(sGrp,mk(bx(0.16,0.56,1.46),sBd),-1.58,0.40,0);
-    put(sGrp,mk(bx(0.16,0.56,1.46),sBd), 1.58,0.40,0);
-    put(sGrp,pillow(0.22,0.10,1.50,sB),-1.58,0.70,0);
-    put(sGrp,pillow(0.22,0.10,1.50,sB), 1.58,0.70,0);
-    put(sGrp,mk(bx(3.04,0.050,0.050),sMt),0,0.025,-0.58);
-    put(sGrp,mk(bx(3.04,0.050,0.050),sMt),0,0.025, 0.58);
-    put(sGrp,mk(bx(0.050,0.050,1.20),sMt),-1.52,0.025,0);
-    put(sGrp,mk(bx(0.050,0.050,1.20),sMt), 1.52,0.025,0);
+    const sVl=M(0x3B1D52,0.90,0.01), sVlD=M(0x28103E,0.92,0.01), sWn=M(0x3A1C0C,0.55,0.08);
+    // Seat platform
+    put(sGrp,mk(bx(3.14,0.38,0.96),sVlD),0,0.19,0);
+    // 3 seat cushions in a gentle forward arc
+    for(let i=0;i<3;i++){
+      const x=-1.04+i*1.04, z=0.08+Math.sin((i/2)*Math.PI)*0.24;
+      put(sGrp,pillow(0.94,0.20,0.88,sVl),x,0.47,z);
+    }
+    // Kidney-curved back: elliptical TubeGeometry arc (wide × shallow = banana curve)
+    const bkPts=Array.from({length:20},(_,i)=>{
+      const a=Math.PI*0.05+(i/19)*Math.PI*0.90;
+      return new THREE.Vector3(Math.cos(a)*1.84,0.55,Math.sin(a)*0.82);
+    });
+    const bkTube=mk(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(bkPts),28,0.24,10,false),sVl);
+    bkTube.castShadow=true; bkTube.userData.item=sItem; sGrp.add(bkTube);
+    // 4 tapered legs
+    [[-1.40,-0.40],[-1.40,0.40],[1.40,-0.40],[1.40,0.40]].forEach(([lx,lz])=>{
+      const leg=taperLeg(0.032,0.018,0.22,sWn); leg.castShadow=true; leg.userData.item=sItem;
+      leg.position.set(lx,0.11,lz); sGrp.add(leg);
+    });
     sGrp.position.set(-0.5,0,2.5);
 
-    // ═══ CHAIR — ivory boucle · walnut frame · turned legs · brass arm
+    // ═══ CHAIR — MCM open-arm lounge · deep emerald velvet · walnut frame ───────────────
     const chItem=scene.items.find(i=>i.id==='s-chair'); const chGrp=grp(chItem);
-    const chIv=M(0xDDD4B0,0.91), chIvD=M(0xAEA888,0.93), chWn=M(0x3A2010,0.58,0.10), chBr=M(0xC8A028,0.22,0.94);
-    put(chGrp,mk(bx(0.96,0.08,0.92),chWn),0,0.375,0);
-    put(chGrp,pillow(0.88,0.22,0.88,chIv),0,0.525,0.02);
-    put(chGrp,mk(bx(0.90,0.020,0.90),chIvD),0,0.637,0.02);
-    put(chGrp,mk(bx(0.062,0.70,0.062),chWn),-0.44,0.74,-0.41);
-    put(chGrp,mk(bx(0.062,0.70,0.062),chWn), 0.44,0.74,-0.41);
-    put(chGrp,mk(bx(0.96,0.064,0.064),chWn),0,1.09,-0.41);
-    put(chGrp,mk(bx(0.78,0.034,0.034),chWn),0,0.82,-0.41);
-    put(chGrp,pillow(0.78,0.62,0.10,chIv),0,0.75,-0.378);
-    put(chGrp,mk(bx(0.80,0.018,0.10),chIvD),0,1.07,-0.378);
-    [[-0.42,-0.38],[0.42,-0.38],[-0.42,0.39],[0.42,0.39]].forEach(([lx,lz])=>{
-      const leg=turnedLeg(0.030,0.018,0.34,chWn); leg.rotation.x=Math.PI; put(chGrp,leg,lx,0.34,lz);
+    const chVl=M(0x1A3D2B,0.90,0.01), chWn=M(0x3A1C0C,0.55,0.10);
+    // Seat frame (low wood slab)
+    put(chGrp,mk(bx(0.94,0.072,0.88),chWn),0,0.33,0);
+    // Seat cushion + back cushion
+    put(chGrp,pillow(0.86,0.18,0.80,chVl),0,0.46,0.02);
+    put(chGrp,pillow(0.82,0.64,0.12,chVl),0,0.76,-0.38);
+    // Back frame: 2 verticals + top rail
+    put(chGrp,mk(bx(0.060,0.78,0.060),chWn),-0.44,0.74,-0.40);
+    put(chGrp,mk(bx(0.060,0.78,0.060),chWn), 0.44,0.74,-0.40);
+    put(chGrp,mk(bx(0.98,0.062,0.062),chWn),0,1.13,-0.40);
+    // Open arms (horizontal bars)
+    put(chGrp,mk(bx(0.060,0.048,0.76),chWn),-0.46,0.58,0.06);
+    put(chGrp,mk(bx(0.060,0.048,0.76),chWn), 0.46,0.58,0.06);
+    // 4 tapered legs angled outward (MCM style)
+    [[-0.44,-0.38,-.06,-.06],[0.44,-0.38,.06,-.06],[-0.44,0.38,-.06,.06],[0.44,0.38,.06,.06]].forEach(([lx,lz,ax,az])=>{
+      const leg=taperLeg(0.028,0.016,0.32,chWn);
+      leg.position.set(lx,0.16,lz); leg.rotation.set(ax,0,az);
+      leg.castShadow=true; leg.userData.item=chItem; chGrp.add(leg);
     });
-    put(chGrp,mk(bx(0.050,0.050,0.88),chBr),0.535,0.74,0.02);
-    put(chGrp,mk(cy(0.023,0.023,0.27,10),chBr),0.535,0.56,-0.38);
     chGrp.position.set(2.5,0,2.3);
 
-    // ═══ COFFEE TABLE — marble top · lower shelf · turned legs
+    // ═══ COFFEE TABLE — oval marble top · dark walnut · tapered legs ───────────────
     const tItem=scene.items.find(i=>i.id==='s-table'); const tGrp=grp(tItem);
-    const tMb=M(0xEEEADE,0.18,0.06), tWd=M(0x927252,0.78), tLg=M(0x201810,0.46,0.45);
-    put(tGrp,mk(bx(1.96,0.072,1.10),tMb),0,0.418,0);
-    put(tGrp,mk(bx(2.00,0.022,1.14),M(0xDAD6C8,0.20,0.06)),0,0.459,0);
-    put(tGrp,mk(bx(1.66,0.048,0.94),tWd),0,0.128,0);
-    [[-0.86,-0.44],[0.86,-0.44],[-0.86,0.44],[0.86,0.44]].forEach(([lx,lz])=>{
-      const leg=turnedLeg(0.030,0.018,0.36,tLg); leg.rotation.x=Math.PI; put(tGrp,leg,lx,0.36,lz);
+    const tMb=M(0xEAE5D8,0.16,0.06), tMbV=M(0xC4BDAE,0.22,0.05), tWd=M(0x4A2A10,0.64,0.06);
+    // Oval top: cylinder scaled to ellipse
+    const topO=mk(new THREE.CylinderGeometry(0.76,0.76,0.060,48),tMb);
+    topO.scale.set(1.30,1,0.82); topO.position.set(0,0.422,0);
+    topO.castShadow=true; topO.userData.item=tItem; tGrp.add(topO);
+    // Edge band (darker marble veining)
+    const edgeO=mk(new THREE.CylinderGeometry(0.762,0.770,0.068,48),tMbV);
+    edgeO.scale.set(1.30,1,0.82); edgeO.position.set(0,0.420,0);
+    edgeO.castShadow=true; edgeO.userData.item=tItem; tGrp.add(edgeO);
+    // 4 tapered legs, splayed outward
+    [[-0.62,-0.30],[-0.62,0.30],[0.62,-0.30],[0.62,0.30]].forEach(([lx,lz])=>{
+      const leg=taperLeg(0.030,0.014,0.38,tWd);
+      leg.position.set(lx,0.19,lz);
+      leg.rotation.set(lz>0?0.06:-0.06,0,lx>0?0.06:-0.06);
+      leg.castShadow=true; leg.userData.item=tItem; tGrp.add(leg);
     });
     tGrp.position.set(0.8,0,3.8);
 
-    // ═══ ARC LAMP — marble disc · brass pole + bezier arm · frosted globe
+    // ═══ ARC LAMP — marble orb base · brass pole + bezier arm · globe shade ──────────────
     const lItem=scene.items.find(i=>i.id==='s-lamp'); const lGrp=grp(lItem);
     const lBr=M(0xC8A030,0.22,0.94), lMb=M(0xE4DCC8,0.32,0.10);
-    put(lGrp,mk(cy(0.32,0.36,0.12,26),lMb),0,0.060,0);
-    put(lGrp,mk(cy(0.24,0.24,0.055,26),M(0xCCC4B0,0.36,0.14)),0,0.118,0);
-    put(lGrp,mk(cy(0.024,0.024,2.32,12),lBr),0,1.30,0);
+    put(lGrp,mk(new THREE.SphereGeometry(0.28,22,16),lMb),0,0.28,0);
+    put(lGrp,mk(cy(0.22,0.24,0.08,24),lMb),0,0.065,0);
+    put(lGrp,mk(cy(0.022,0.022,2.40,10),lBr),0,1.36,0);
     const arcC=new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0,2.48,0), new THREE.Vector3(0.70,2.90,-0.16),
-      new THREE.Vector3(1.32,2.56,-0.36));
-    const armO=new THREE.Mesh(new THREE.TubeGeometry(arcC,18,0.024,12,false),lBr);
+      new THREE.Vector3(0,2.56,0),new THREE.Vector3(0.80,2.95,-0.18),
+      new THREE.Vector3(1.42,2.58,-0.40));
+    const armO=new THREE.Mesh(new THREE.TubeGeometry(arcC,20,0.022,10,false),lBr);
     armO.castShadow=true; armO.userData.item=lItem; lGrp.add(armO);
-    put(lGrp,mk(new THREE.SphereGeometry(0.26,24,18),M(0xFFF8DC,0.08,0,{
-      emissive:0xFFCC44,emissiveIntensity:1.4,transparent:true,opacity:0.88
-    })),1.32,2.53,-0.36);
+    put(lGrp,mk(new THREE.SphereGeometry(0.24,22,16),M(0xFFF8DC,0.08,0,{
+      emissive:0xFFCC44,emissiveIntensity:1.4,transparent:true,opacity:0.90
+    })),1.42,2.55,-0.40);
     lGrp.position.set(-4.5,0,0.5);
 
     // RAYCASTING
