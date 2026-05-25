@@ -1074,110 +1074,162 @@ function SalonThreeScene({ scene, onHotspot, isActive }) {
     winGlow.position.set(4.5, 3.5, 1.8);
     s.add(winGlow);
 
-    // ── Furniture helper ──
-    const loader = new THREE.TextureLoader();
-    function loadTex(src) {
-      const t = loader.load(src);
-      t.colorSpace = THREE.SRGBColorSpace;
-      return t;
+    // ── Shared material helper ──
+    function mat(color, roughness=0.85, metalness=0.0, extra={}) {
+      return new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
     }
-
-    function boxFurn(texSrc, w, h, d, x, y, z, sideColor, ry=0) {
-      const tex = loadTex(texSrc);
-      const front = new THREE.MeshStandardMaterial({ map:tex, roughness:0.75 });
-      const side  = new THREE.MeshStandardMaterial({ color:sideColor, roughness:0.85 });
-      const top   = new THREE.MeshStandardMaterial({ color:new THREE.Color(sideColor).multiplyScalar(0.75), roughness:0.9 });
-      // BoxGeo face order: +x, -x, +y, -y, +z (front), -z (back)
-      const mats  = [side, side, top, side, front, side];
-      const mesh  = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats);
-      mesh.position.set(x, y + h/2, z);
-      mesh.rotation.y = ry;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      s.add(mesh); return mesh;
+    function mesh(geo, m) {
+      const o = new THREE.Mesh(geo, m);
+      o.castShadow = true; o.receiveShadow = true;
+      return o;
+    }
+    function box(w,h,d) { return new THREE.BoxGeometry(w,h,d); }
+    function cyl(rt,rb,h,s=12) { return new THREE.CylinderGeometry(rt,rb,h,s); }
+    function group(item) {
+      const g = new THREE.Group();
+      // tag every child added later with the item so raycasting works
+      g._item = item;
+      s.add(g); return g;
+    }
+    function addToGroup(g, o, x,y,z, ry=0) {
+      o.position.set(x,y,z); o.rotation.y = ry;
+      o.castShadow = true; o.receiveShadow = true;
+      o.userData.item = g._item;
+      g.add(o); return o;
     }
 
     // ── Rug ──
-    const rugMat = new THREE.MeshStandardMaterial({ color:0x9B7FA6, roughness:0.95, transparent:true, opacity:0.65 });
-    const rug = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 2.8), rugMat);
-    rug.rotation.x = -Math.PI/2;
-    rug.position.set(0.3, 0.01, 3.2);
-    rug.receiveShadow = true;
-    s.add(rug);
+    const rugM = mat(0x9B7FA6, 0.95, 0, { transparent:true, opacity:0.65 });
+    const rugMesh = mesh(new THREE.PlaneGeometry(3.8, 2.8), rugM);
+    rugMesh.rotation.x = -Math.PI/2;
+    rugMesh.position.set(0.3, 0.01, 3.2);
+    s.add(rugMesh);
 
-    // ── Console (against back wall, left of centre) ──
-    const consoleMesh = boxFurn(IMG_CONSOLE, 3.6, 0.68, 0.5, -2.2, 0, 0.25, 0x5a4030);
-
-    // ── Sofa ──
-    const sofaMesh = boxFurn(IMG_SOFA, 3.1, 0.88, 1.5, -0.5, 0, 2.5, 0xB09050);
-    // sofa back cushion slab
-    const sofaBack = new THREE.Mesh(
-      new THREE.BoxGeometry(3.1, 0.6, 0.18),
-      new THREE.MeshStandardMaterial({ color:0xA08040, roughness:0.8 })
-    );
-    sofaBack.position.set(-0.5, 1.08, 1.84);
-    sofaBack.castShadow = true; sofaBack.receiveShadow = true;
-    s.add(sofaBack);
-
-    // ── Chair ──
-    const chairMesh = boxFurn(IMG_CHAIR, 1.1, 0.82, 1.0, 2.8, 0, 2.4, 0xCCBB90);
-    const chairBack = new THREE.Mesh(
-      new THREE.BoxGeometry(1.1, 0.55, 0.16),
-      new THREE.MeshStandardMaterial({ color:0xBBAA80, roughness:0.8 })
-    );
-    chairBack.position.set(2.8, 1.08, 1.97);
-    chairBack.castShadow = true; chairBack.receiveShadow = true;
-    s.add(chairBack);
-
-    // ── Coffee table ──
-    const tableMesh = boxFurn(IMG_TABLE, 2.0, 0.40, 1.15, 0.5, 0, 3.6, 0x907860);
-    // table legs
-    [[0.85,0.55],[0.85,1.45],[-0.85,0.55],[-0.85,1.45]].forEach(([ox,oz]) => {
-      const leg = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.04, 0.36, 8),
-        new THREE.MeshStandardMaterial({ color:0x6a5030, roughness:0.7, metalness:0.2 })
-      );
-      leg.position.set(0.5+ox, 0.18, 3.6-0.575+oz);
-      leg.castShadow = true;
-      s.add(leg);
+    // ───────────────────────────────────────────────────────────────
+    // CONSOLE  — cerused dark-oak credenza, brass pulls, angled legs
+    // ───────────────────────────────────────────────────────────────
+    const consoleItem = scene.items.find(i=>i.id==='s-console');
+    const consoleGrp = group(consoleItem);
+    const oakDark  = mat(0x2A1A0E, 0.82);
+    const oakMid   = mat(0x3C2415, 0.80);
+    const brassM   = mat(0xC09828, 0.28, 0.90);
+    // body
+    addToGroup(consoleGrp, mesh(box(3.6,0.62,0.48), oakDark), 0, 0.37, 0);
+    // four door panels (slightly proud)
+    for (let i=0; i<4; i++) {
+      addToGroup(consoleGrp, mesh(box(0.80,0.52,0.025), oakMid), -1.35+i*0.9, 0.37, 0.255);
+    }
+    // brass pulls (horizontal bar per door)
+    for (let i=0; i<4; i++) {
+      const pull = mesh(cyl(0.013,0.013,0.18,8), brassM);
+      pull.rotation.z = Math.PI/2;
+      addToGroup(consoleGrp, pull, -1.35+i*0.9, 0.37, 0.275);
+    }
+    // four angled hairpin-style legs
+    [[-1.65,-0.19],[-1.65,0.19],[1.65,-0.19],[1.65,0.19]].forEach(([lx,lz]) => {
+      addToGroup(consoleGrp, mesh(box(0.045,0.14,0.045), oakDark), lx, 0.07, lz);
     });
+    consoleGrp.position.set(-2.2, 0, 0.24);
 
-    // ── Arc lamp ──
-    const brassM = new THREE.MeshStandardMaterial({ color:0xC8A030, roughness:0.25, metalness:0.9 });
-    const marbleM = new THREE.MeshStandardMaterial({ color:0xE0D8CC, roughness:0.35, metalness:0.08 });
-    // base
-    const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.32,0.14,20), marbleM);
-    lampBase.position.set(-4.2, 0.07, 2.2);
-    lampBase.castShadow = true; s.add(lampBase);
+    // ───────────────────────────────────────────────────────────────
+    // SOFA  — honey-mustard boucle sectional, sled base, deep cushions
+    // ───────────────────────────────────────────────────────────────
+    const sofaItem = scene.items.find(i=>i.id==='s-sofa');
+    const sofaGrp  = group(sofaItem);
+    const boucle   = mat(0xC49A28, 0.93);
+    const boucleDk = mat(0xA07C18, 0.95);
+    const slimMet  = mat(0x181008, 0.65, 0.45);
+    // seat platform
+    addToGroup(sofaGrp, mesh(box(3.2,0.20,1.48), boucleDk), 0, 0.10, 0);
+    // three seat cushions
+    for (let i=0; i<3; i++)
+      addToGroup(sofaGrp, mesh(box(0.96,0.22,1.38), boucle), -1.04+i*1.04, 0.31, 0.02);
+    // backrest frame
+    addToGroup(sofaGrp, mesh(box(3.2,0.54,0.16), boucleDk), 0, 0.58, -0.64);
+    // three back cushions
+    for (let i=0; i<3; i++)
+      addToGroup(sofaGrp, mesh(box(0.96,0.48,0.13), boucle), -1.04+i*1.04, 0.57, -0.615);
+    // arm panels
+    addToGroup(sofaGrp, mesh(box(0.14,0.52,1.48), boucleDk), -1.57, 0.36, 0);
+    addToGroup(sofaGrp, mesh(box(0.14,0.52,1.48), boucleDk),  1.57, 0.36, 0);
+    // sled base rails
+    addToGroup(sofaGrp, mesh(box(3.05,0.06,0.06), slimMet), 0, 0.03, -0.56);
+    addToGroup(sofaGrp, mesh(box(3.05,0.06,0.06), slimMet), 0, 0.03,  0.56);
+    sofaGrp.position.set(-0.4, 0, 2.5);
+
+    // ───────────────────────────────────────────────────────────────
+    // CHAIR  — ivory boucle, smoked-walnut tapered legs, brass arm
+    // ───────────────────────────────────────────────────────────────
+    const chairItem = scene.items.find(i=>i.id==='s-chair');
+    const chairGrp  = group(chairItem);
+    const ivory   = mat(0xDDD4B4, 0.90);
+    const ivoryDk = mat(0xC2BA9C, 0.92);
+    const walnut  = mat(0x3A2010, 0.62, 0.08);
+    // seat frame
+    addToGroup(chairGrp, mesh(box(1.0,0.10,0.95), walnut), 0, 0.38, 0);
+    // seat cushion
+    addToGroup(chairGrp, mesh(box(0.92,0.17,0.88), ivory), 0, 0.52, 0.02);
+    // back frame
+    addToGroup(chairGrp, mesh(box(1.0,0.08,0.10), walnut), 0, 0.83, -0.415);
+    addToGroup(chairGrp, mesh(box(0.08,0.68,0.10), walnut), -0.46, 0.66, -0.415);
+    addToGroup(chairGrp, mesh(box(0.08,0.68,0.10), walnut),  0.46, 0.66, -0.415);
+    // back cushion
+    addToGroup(chairGrp, mesh(box(0.84,0.62,0.08), ivory), 0, 0.65, -0.375);
+    // four tapered legs
+    [[-0.42,-0.38],[0.42,-0.38],[-0.42,0.38],[0.42,0.38]].forEach(([lx,lz]) => {
+      addToGroup(chairGrp, mesh(cyl(0.022,0.032,0.36,8), walnut), lx, 0.18, lz);
+    });
+    // brass arm (right side, single horizontal rail + drop)
+    addToGroup(chairGrp, mesh(box(0.055,0.055,0.88), brassM), 0.53, 0.72, 0.01);
+    addToGroup(chairGrp, mesh(cyl(0.027,0.027,0.30,8), brassM), 0.53, 0.54, -0.38);
+    chairGrp.position.set(2.9, 0, 2.4);
+
+    // ───────────────────────────────────────────────────────────────
+    // COFFEE TABLE  — honed marble top, lower shelf, slender legs
+    // ───────────────────────────────────────────────────────────────
+    const tableItem = scene.items.find(i=>i.id==='s-table');
+    const tableGrp  = group(tableItem);
+    const marble  = mat(0xECE8DC, 0.22, 0.04);
+    const oakWarm = mat(0x907050, 0.78);
+    const darkLeg = mat(0x302820, 0.52, 0.35);
+    // top slab (marble)
+    addToGroup(tableGrp, mesh(box(2.0,0.07,1.14), marble), 0, 0.42, 0);
+    // lower shelf (wood)
+    addToGroup(tableGrp, mesh(box(1.74,0.05,0.96), oakWarm), 0, 0.14, 0);
+    // four slender legs
+    [[-0.88,-0.46],[0.88,-0.46],[-0.88,0.46],[0.88,0.46]].forEach(([lx,lz]) => {
+      addToGroup(tableGrp, mesh(cyl(0.036,0.036,0.38,10), darkLeg), lx, 0.19, lz);
+    });
+    tableGrp.position.set(0.5, 0, 3.6);
+
+    // ───────────────────────────────────────────────────────────────
+    // ARC LAMP  — marble base, brass pole + arm, frosted globe
+    // ───────────────────────────────────────────────────────────────
+    const lampItem  = scene.items.find(i=>i.id==='s-lamp');
+    const lampGrp   = group(lampItem);
+    const brassLamp = mat(0xC8A030, 0.25, 0.90);
+    const marbLamp  = mat(0xE2DAC8, 0.35, 0.08);
+    // base disc
+    addToGroup(lampGrp, mesh(cyl(0.28,0.32,0.13,22), marbLamp), 0, 0.065, 0);
+    // base weight ring
+    addToGroup(lampGrp, mesh(cyl(0.22,0.22,0.06,22), mat(0xD0C8B8,0.4,0.1)), 0, 0.12, 0);
     // pole
-    const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,2.3,8), brassM);
-    lampPole.position.set(-4.2, 1.29, 2.2);
-    lampPole.castShadow = true; s.add(lampPole);
-    // arc arm via QuadraticBezierCurve3
-    const arc = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(-4.2, 2.44, 2.2),
-      new THREE.Vector3(-3.5, 2.85, 2.0),
-      new THREE.Vector3(-2.9, 2.55, 2.0)
+    addToGroup(lampGrp, mesh(cyl(0.026,0.026,2.28,8), brassLamp), 0, 1.28, 0);
+    // arc arm
+    const arcCurve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, 2.44, 0),
+      new THREE.Vector3(0.7, 2.82, -0.18),
+      new THREE.Vector3(1.36, 2.52, -0.38)
     );
-    const armMesh = new THREE.Mesh(new THREE.TubeGeometry(arc, 14, 0.028, 8, false), brassM);
-    armMesh.castShadow = true; s.add(armMesh);
+    const armMesh2 = new THREE.Mesh(new THREE.TubeGeometry(arcCurve,14,0.027,8,false), brassLamp);
+    armMesh2.userData.item = lampItem;
+    lampGrp.add(armMesh2);
     // globe
-    const globeM = new THREE.MeshStandardMaterial({
-      color:0xFFF6D0, emissive:0xFFCC44, emissiveIntensity:1.2,
-      roughness:0.15, transparent:true, opacity:0.88
-    });
-    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.24,20,20), globeM);
-    globe.position.set(-2.9, 2.52, 2.0);
-    s.add(globe);
+    const globeM = mat(0xFFF6D8, 0.12, 0, { emissive:0xFFCC44, emissiveIntensity:1.1, transparent:true, opacity:0.86 });
+    addToGroup(lampGrp, mesh(new THREE.SphereGeometry(0.24,20,20), globeM), 1.36, 2.5, -0.38);
+    lampGrp.position.set(-4.3, 0, 2.1);
 
-    // ── Raycasting clickable objects ──
-    const clickMap = [
-      { mesh:consoleMesh, item: scene.items.find(i=>i.id==='s-console') },
-      { mesh:sofaMesh,    item: scene.items.find(i=>i.id==='s-sofa') },
-      { mesh:chairMesh,   item: scene.items.find(i=>i.id==='s-chair') },
-      { mesh:tableMesh,   item: scene.items.find(i=>i.id==='s-table') },
-      { mesh:lampBase,    item: scene.items.find(i=>i.id==='s-lamp') },
-    ];
+    // ── Raycasting — recursive so children are hit ──
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -1186,10 +1238,12 @@ function SalonThreeScene({ scene, onHotspot, isActive }) {
       mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
       mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
       raycaster.setFromCamera(mouse, cam);
-      const hits = raycaster.intersectObjects(clickMap.map(c=>c.mesh), false);
+      const hits = raycaster.intersectObjects(
+        [consoleGrp,sofaGrp,chairGrp,tableGrp,lampGrp], true
+      );
       if (hits.length) {
-        const found = clickMap.find(c => c.mesh === hits[0].object);
-        if (found?.item) onHotspot(found.item, { x:e.clientX, y:e.clientY });
+        const item = hits[0].object.userData.item;
+        if (item) onHotspot(item, { x:e.clientX, y:e.clientY });
       }
     }
     renderer.domElement.addEventListener('click', onClick);
