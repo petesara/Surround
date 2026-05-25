@@ -997,10 +997,12 @@ function BeginScene() {
 // ── Scene slot — WAAPI cross-fade + scale ─────────────────────────
 
 function SceneSlot({ scene, isActive, isBehind, children }) {
-  const ref = useRef(null);
-  const prevActive = useRef(isActive);
+  const ref       = useRef(null);
+  const mounted   = useRef(false);
 
-  useEffect(() => {
+  // useLayoutEffect fires synchronously before browser paint,
+  // so the element is never rendered at the wrong opacity mid-frame.
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
@@ -1009,17 +1011,25 @@ function SceneSlot({ scene, isActive, isBehind, children }) {
     const targetBlur  = isActive ? 0 : 5;
 
     el.getAnimations().forEach(a => a.cancel());
-    const cs = getComputedStyle(el);
+
+    if (!mounted.current) {
+      // Initial mount — set immediately with no animation
+      mounted.current = true;
+      el.style.opacity   = String(targetOp);
+      el.style.transform = `scale(${targetScale})`;
+      el.style.filter    = targetBlur > 0 ? `blur(${targetBlur}px)` : 'none';
+      return;
+    }
+
+    const cs   = getComputedStyle(el);
     const curOp = parseFloat(cs.opacity) || 0;
     const curTr = cs.transform === 'none' ? 'scale(1)' : cs.transform;
-    const curFl = cs.filter  === 'none' ? 'blur(0px)' : cs.filter;
+    const curFl = cs.filter    === 'none' ? 'blur(0px)' : cs.filter;
 
     el.animate([
       { opacity: curOp, transform: curTr, filter: curFl },
       { opacity: targetOp, transform: `scale(${targetScale})`, filter: `blur(${targetBlur}px)` },
     ], { duration: 2200, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'forwards' });
-
-    prevActive.current = isActive;
   }, [isActive, isBehind]);
 
   return (
@@ -1028,9 +1038,6 @@ function SceneSlot({ scene, isActive, isBehind, children }) {
       className={"scene"+(scene.kind==='opening'?' opening':'')}
       style={{
         ...(scene.palette || {}),
-        opacity: isActive ? 1 : 0,
-        transform: isActive ? 'scale(1)' : (isBehind ? 'scale(0.96)' : 'scale(1.04)'),
-        filter: isActive ? 'blur(0px)' : 'blur(8px)',
         pointerEvents: isActive ? 'auto' : 'none',
         position:'absolute', inset:0,
       }}
@@ -1054,9 +1061,9 @@ function Stage() {
     if (idx === 0 && target === 1 && !transitioning.current) {
       transitioning.current = true;
       setFlyingO(true);
-      // Delay room fade-in until the O has expanded enough to cover the screen
-      // (~750ms = 27% of 2800ms, when O is most of the way across)
-      setTimeout(() => setIdx(1), 750);
+      // Wait for O to fully fade out before activating the room
+      // (O reaches opacity 0 at 2800ms; 2650ms gives a clean handoff)
+      setTimeout(() => setIdx(1), 2650);
     } else {
       setIdx(target);
     }
