@@ -1003,6 +1003,7 @@ function SalonPhotoScene({ scene, isActive, onHotspot }) {
         backgroundImage:'url('+IMG_SALON+')',
         backgroundSize:'cover',
         backgroundPosition:'center center',
+        pointerEvents:'none',
       }}/>
       <div style={{
         position:'absolute',inset:0,
@@ -1017,8 +1018,8 @@ function SalonPhotoScene({ scene, isActive, onHotspot }) {
       </div>
       {scene.items.map(item=>(
         <button key={item.id+'-hot'} className={"hotspot"+(item.hot.dark?" dark":"")}
-          style={{left:item.hot.x,top:item.hot.y}}
-          onClick={e=>{const r=e.currentTarget.getBoundingClientRect();onHotspot(item,{x:r.left+r.width/2,y:r.top+r.height/2});}}
+          style={{left:item.hot.x,top:item.hot.y,position:'absolute',zIndex:20}}
+          onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();onHotspot(item,{x:r.left+r.width/2,y:r.top+r.height/2});}}
           aria-label={"open "+item.info.name}>
           <span className="pulse"/><span className="dot"/>
         </button>
