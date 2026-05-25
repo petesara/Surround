@@ -980,6 +980,7 @@ function SalonThreeScene({ scene, onHotspot, isActive }) {
   const mountRef = useRef(null);
   const veilRef  = useRef(null);
   const threeRef = useRef(null);
+  const [spotId, setSpotId] = useState(null);
 
   // Init Three.js once
   useEffect(() => {
@@ -994,318 +995,254 @@ function SalonThreeScene({ scene, onHotspot, isActive }) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W, H);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
-    renderer.domElement.style.position = 'absolute';
-    renderer.domElement.style.inset = '0';
+    renderer.toneMappingExposure = 1.05;
+    renderer.domElement.style.cssText = 'position:absolute;inset:0;';
     mount.appendChild(renderer.domElement);
 
     // ── Scene ──
-    const s = new THREE.Scene();
-    s.background = new THREE.Color(0x806588);
-    s.fog = new THREE.FogExp2(0x3a1f44, 0.045);
+    const sc = new THREE.Scene();
+    sc.background = new THREE.Color(0x180C22);
+    sc.fog = new THREE.FogExp2(0x180C22, 0.036);
 
-    // ── Camera — 3/4 view ──
-    const cam = new THREE.PerspectiveCamera(42, W/H, 0.1, 60);
-    cam.position.set(1.8, 2.2, 7.8);
-    cam.lookAt(0, 1.4, 0);
+    // ── Camera ──
+    const cam = new THREE.PerspectiveCamera(40, W/H, 0.1, 60);
+    const OV_POS  = new THREE.Vector3(1.4, 2.0, 7.6);
+    const OV_LOOK = new THREE.Vector3(-0.2, 1.2, 0);
+    cam.position.copy(OV_POS);
+    // Smooth camera lerp state
+    const camPos   = OV_POS.clone();
+    const camLook  = OV_LOOK.clone();
+    const camPosT  = OV_POS.clone();
+    const camLookT = OV_LOOK.clone();
+    // Per-item front-view spotlight positions
+    const spots = {
+      's-console': { pos:new THREE.Vector3(-2.1, 0.85, 3.0), look:new THREE.Vector3(-2.2, 0.36, 0.23) },
+      's-sofa':    { pos:new THREE.Vector3(-0.4, 1.05, 5.6), look:new THREE.Vector3(-0.4, 0.50, 2.5)  },
+      's-chair':   { pos:new THREE.Vector3( 2.9, 0.90, 5.0), look:new THREE.Vector3( 2.9, 0.48, 2.4)  },
+      's-table':   { pos:new THREE.Vector3( 0.5, 1.35, 5.7), look:new THREE.Vector3( 0.5, 0.20, 3.6)  },
+      's-lamp':    { pos:new THREE.Vector3(-4.3, 1.75, 5.0), look:new THREE.Vector3(-4.3, 1.35, 2.1)  },
+    };
 
-    // ── Lights ──
-    s.add(new THREE.AmbientLight(0xB090C8, 0.55));
+    // ── BOLD EDITORIAL LIGHTING ──
+    sc.add(new THREE.AmbientLight(0x5030A0, 0.16));          // near-black fill
+    const keyLight = new THREE.DirectionalLight(0xFFEED0, 4.4);
+    keyLight.position.set(6, 8, 6);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.near = 1; keyLight.shadow.camera.far = 42;
+    keyLight.shadow.camera.left = -9; keyLight.shadow.camera.right = 9;
+    keyLight.shadow.camera.top  =  8; keyLight.shadow.camera.bottom = -8;
+    keyLight.shadow.bias   = -0.0008;
+    keyLight.shadow.radius = 1.2;
+    sc.add(keyLight);
+    const lampPt = new THREE.PointLight(0xFF8C18, 4.2, 5.5, 2);
+    lampPt.position.set(-2.92, 2.50, 1.70);
+    lampPt.castShadow = true; lampPt.shadow.mapSize.set(512,512);
+    sc.add(lampPt);
+    const rimLight = new THREE.DirectionalLight(0x1830A8, 0.65);
+    rimLight.position.set(-3, 5, -5);
+    sc.add(rimLight);
+    const winFill = new THREE.PointLight(0xFFCC50, 1.5, 5.5, 2);
+    winFill.position.set(4.5, 3.5, 1.8);
+    sc.add(winFill);
 
-    const sunLight = new THREE.DirectionalLight(0xFFE4B0, 2.2);
-    sunLight.position.set(5, 6, 7);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.set(2048, 2048);
-    sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far  = 40;
-    sunLight.shadow.camera.left = -8; sunLight.shadow.camera.right = 8;
-    sunLight.shadow.camera.top  =  6; sunLight.shadow.camera.bottom = -6;
-    sunLight.shadow.bias = -0.0005;
-    s.add(sunLight);
-
-    const lampLight = new THREE.PointLight(0xFFAA44, 3.5, 5.5, 2);
-    lampLight.position.set(-4.0, 2.9, 2.2);
-    lampLight.castShadow = true;
-    lampLight.shadow.mapSize.set(512, 512);
-    s.add(lampLight);
-
-    const fillLight = new THREE.DirectionalLight(0x9070A8, 0.4);
-    fillLight.position.set(-4, 3, 5);
-    s.add(fillLight);
-
-    // ── Materials ──
-    const wallMat  = new THREE.MeshStandardMaterial({ color:0x806588, roughness:0.88, metalness:0.04 });
-    const sideWall = new THREE.MeshStandardMaterial({ color:0x6b4d72, roughness:0.88, metalness:0.04 });
-    const floorMat = new THREE.MeshStandardMaterial({ color:0x4e3659, roughness:0.92, metalness:0.02 });
-    const ceilMat  = new THREE.MeshStandardMaterial({ color:0x22152e, roughness:1.0 });
-
-    // ── Room geometry ──
-    function addPlane(geo, mat, px, py, pz, rx, ry) {
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(px, py, pz);
-      if (rx) m.rotation.x = rx;
-      if (ry) m.rotation.y = ry;
-      m.receiveShadow = true;
-      s.add(m); return m;
-    }
-
-    addPlane(new THREE.PlaneGeometry(14, 6), wallMat,  0, 3, -1);            // back wall
-    addPlane(new THREE.PlaneGeometry(12, 6), sideWall, -6, 3, 5, 0,  Math.PI/2); // left wall
-    addPlane(new THREE.PlaneGeometry(12, 6), sideWall,  6, 3, 5, 0, -Math.PI/2); // right wall
-    addPlane(new THREE.PlaneGeometry(14, 14), floorMat, 0, 0, 5, -Math.PI/2);    // floor
-    addPlane(new THREE.PlaneGeometry(14, 14), ceilMat,  0, 6, 5,  Math.PI/2);    // ceiling
-
-    // ── O-window (right wall) ──
-    const winMat = new THREE.MeshBasicMaterial({ color:0xFFE8A0 });
-    const win = new THREE.Mesh(new THREE.CircleGeometry(0.88, 40), winMat);
-    win.position.set(5.92, 3.5, 1.8);
-    win.rotation.y = -Math.PI/2;
-    s.add(win);
-    const rimMat = new THREE.MeshBasicMaterial({ color:0xF0EAE0, side:THREE.FrontSide });
-    const rim = new THREE.Mesh(new THREE.RingGeometry(0.88, 0.93, 40), rimMat);
-    rim.position.set(5.9, 3.5, 1.8);
-    rim.rotation.y = -Math.PI/2;
-    s.add(rim);
-    // Window glow
-    const winGlow = new THREE.PointLight(0xFFD080, 1.6, 5, 2);
-    winGlow.position.set(4.5, 3.5, 1.8);
-    s.add(winGlow);
-
-    // ── Shared material helper ──
-    function mat(color, roughness=0.85, metalness=0.0, extra={}) {
-      return new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
-    }
-    function mesh(geo, m) {
+    // ── ROOM ──
+    function pln(geo, m, px, py, pz, rx=0, ry=0) {
       const o = new THREE.Mesh(geo, m);
-      o.castShadow = true; o.receiveShadow = true;
-      return o;
+      o.position.set(px,py,pz); o.rotation.set(rx,ry,0);
+      o.receiveShadow = true; sc.add(o);
     }
-    function box(w,h,d) { return new THREE.BoxGeometry(w,h,d); }
-    function cyl(rt,rb,h,s=12) { return new THREE.CylinderGeometry(rt,rb,h,s); }
-    function group(item) {
-      const g = new THREE.Group();
-      // tag every child added later with the item so raycasting works
-      g._item = item;
-      s.add(g); return g;
+    pln(new THREE.PlaneGeometry(14,6), new THREE.MeshStandardMaterial({color:0x6E4882,roughness:0.90,metalness:0.04}), 0,3,-1);
+    pln(new THREE.PlaneGeometry(12,6), new THREE.MeshStandardMaterial({color:0x4A2A5C,roughness:0.90,metalness:0.04}), -6,3,5, 0, Math.PI/2);
+    pln(new THREE.PlaneGeometry(12,6), new THREE.MeshStandardMaterial({color:0x4A2A5C,roughness:0.90,metalness:0.04}),  6,3,5, 0,-Math.PI/2);
+    pln(new THREE.PlaneGeometry(14,14), new THREE.MeshStandardMaterial({color:0x3A1E48,roughness:0.95,metalness:0.03}), 0,0,5, -Math.PI/2);
+    pln(new THREE.PlaneGeometry(14,14), new THREE.MeshStandardMaterial({color:0x0E0818,roughness:1.0}), 0,6,5,  Math.PI/2);
+
+    // O-window
+    const owin = new THREE.Mesh(new THREE.CircleGeometry(0.88,42), new THREE.MeshBasicMaterial({color:0xFFE090}));
+    owin.position.set(5.92,3.5,1.8); owin.rotation.y = -Math.PI/2; sc.add(owin);
+    const orim = new THREE.Mesh(new THREE.RingGeometry(0.88,0.93,42), new THREE.MeshBasicMaterial({color:0xF0EAE0}));
+    orim.position.set(5.9,3.5,1.8); orim.rotation.y = -Math.PI/2; sc.add(orim);
+
+    // ── FURNITURE HELPERS ──
+    function M(color,r=0.85,me=0,ex={}) { return new THREE.MeshStandardMaterial({color,roughness:r,metalness:me,...ex}); }
+    function mk(geo,m) { const o=new THREE.Mesh(geo,m); o.castShadow=true; o.receiveShadow=true; return o; }
+    function bx(w,h,d)     { return new THREE.BoxGeometry(w,h,d); }
+    function cy(rt,rb,h,s=14) { return new THREE.CylinderGeometry(rt,rb,h,s); }
+    function grp(item) { const g=new THREE.Group(); g._item=item; sc.add(g); return g; }
+    function put(g,o,x,y,z,rx=0,ry=0) {
+      o.position.set(x,y,z); o.rotation.set(rx,ry,0);
+      o.castShadow=true; o.receiveShadow=true; o.userData.item=g._item; g.add(o); return o;
     }
-    function addToGroup(g, o, x,y,z, ry=0) {
-      o.position.set(x,y,z); o.rotation.y = ry;
-      o.castShadow = true; o.receiveShadow = true;
-      o.userData.item = g._item;
-      g.add(o); return o;
+
+    // RUG
+    const rugO = mk(new THREE.PlaneGeometry(4.0,3.0), M(0x9B7FA6,0.95,0,{transparent:true,opacity:0.58}));
+    rugO.rotation.x=-Math.PI/2; rugO.position.set(0.3,0.006,3.1); rugO.receiveShadow=true; sc.add(rugO);
+
+    // CONSOLE — cerused-oak credenza · brass pulls · hairpin legs
+    const cItem=scene.items.find(i=>i.id==='s-console'); const cGrp=grp(cItem);
+    const cOD=M(0x1C1008,0.83), cOM=M(0x2E1C0C,0.81), cBr=M(0xC8A028,0.26,0.92);
+    put(cGrp,mk(bx(3.6,0.64,0.46),cOD),0,0.38,0);
+    put(cGrp,mk(bx(3.64,0.032,0.50),cOM),0,0.712,0);
+    for(let i=0;i<4;i++){
+      put(cGrp,mk(bx(0.80,0.54,0.026),cOM),-1.35+i*0.9,0.38,0.245);
+      if(i<3) put(cGrp,mk(bx(0.020,0.56,0.030),cOD),-1.35+i*0.9+0.45,0.38,0.246);
+      const pl=mk(cy(0.011,0.011,0.20,8),cBr); pl.rotation.z=Math.PI/2;
+      put(cGrp,pl,-1.35+i*0.9,0.38,0.265);
     }
+    [[-1.66,-0.17],[-1.66,0.17],[1.66,-0.17],[1.66,0.17]].forEach(([lx,lz])=>put(cGrp,mk(bx(0.042,0.16,0.042),cOD),lx,0.08,lz));
+    cGrp.position.set(-2.2,0,0.23);
 
-    // ── Rug ──
-    const rugM = mat(0x9B7FA6, 0.95, 0, { transparent:true, opacity:0.65 });
-    const rugMesh = mesh(new THREE.PlaneGeometry(3.8, 2.8), rugM);
-    rugMesh.rotation.x = -Math.PI/2;
-    rugMesh.position.set(0.3, 0.01, 3.2);
-    s.add(rugMesh);
-
-    // ───────────────────────────────────────────────────────────────
-    // CONSOLE  — cerused dark-oak credenza, brass pulls, angled legs
-    // ───────────────────────────────────────────────────────────────
-    const consoleItem = scene.items.find(i=>i.id==='s-console');
-    const consoleGrp = group(consoleItem);
-    const oakDark  = mat(0x2A1A0E, 0.82);
-    const oakMid   = mat(0x3C2415, 0.80);
-    const brassM   = mat(0xC09828, 0.28, 0.90);
-    // body
-    addToGroup(consoleGrp, mesh(box(3.6,0.62,0.48), oakDark), 0, 0.37, 0);
-    // four door panels (slightly proud)
-    for (let i=0; i<4; i++) {
-      addToGroup(consoleGrp, mesh(box(0.80,0.52,0.025), oakMid), -1.35+i*0.9, 0.37, 0.255);
+    // SOFA — honey-mustard boucle · plump cushions with seams · complete sled frame
+    const sItem=scene.items.find(i=>i.id==='s-sofa'); const sGrp=grp(sItem);
+    const sB=M(0xC49A28,0.94), sBd=M(0x9A7410,0.96), sSm=M(0x7A5A06,0.97), sMt=M(0x141008,0.60,0.50);
+    put(sGrp,mk(bx(3.2,0.18,1.52),sBd),0,0.09,0);
+    for(let i=0;i<3;i++){
+      put(sGrp,mk(bx(0.93,0.28,1.38),sB),-1.04+i*1.04,0.36,0.04);
+      if(i<2) put(sGrp,mk(bx(0.020,0.26,1.36),sSm),-1.04+i*1.04+0.475,0.36,0.04);
     }
-    // brass pulls (horizontal bar per door)
-    for (let i=0; i<4; i++) {
-      const pull = mesh(cyl(0.013,0.013,0.18,8), brassM);
-      pull.rotation.z = Math.PI/2;
-      addToGroup(consoleGrp, pull, -1.35+i*0.9, 0.37, 0.275);
+    put(sGrp,mk(bx(3.2,0.58,0.18),sBd),0,0.63,-0.65);
+    for(let i=0;i<3;i++){
+      put(sGrp,mk(bx(0.93,0.52,0.15),sB),-1.04+i*1.04,0.62,-0.630);
+      if(i<2) put(sGrp,mk(bx(0.020,0.50,0.13),sSm),-1.04+i*1.04+0.475,0.62,-0.630);
     }
-    // four angled hairpin-style legs
-    [[-1.65,-0.19],[-1.65,0.19],[1.65,-0.19],[1.65,0.19]].forEach(([lx,lz]) => {
-      addToGroup(consoleGrp, mesh(box(0.045,0.14,0.045), oakDark), lx, 0.07, lz);
-    });
-    consoleGrp.position.set(-2.2, 0, 0.24);
+    put(sGrp,mk(bx(0.17,0.58,1.52),sBd),-1.585,0.40,0);
+    put(sGrp,mk(bx(0.17,0.58,1.52),sBd), 1.585,0.40,0);
+    put(sGrp,mk(bx(0.19,0.06,1.54),sB), -1.585,0.72,0);
+    put(sGrp,mk(bx(0.19,0.06,1.54),sB),  1.585,0.72,0);
+    put(sGrp,mk(bx(3.06,0.055,0.055),sMt),0,0.028,-0.585);
+    put(sGrp,mk(bx(3.06,0.055,0.055),sMt),0,0.028, 0.585);
+    put(sGrp,mk(bx(0.055,0.055,1.21),sMt),-1.525,0.028,0);
+    put(sGrp,mk(bx(0.055,0.055,1.21),sMt), 1.525,0.028,0);
+    sGrp.position.set(-0.4,0,2.5);
 
-    // ───────────────────────────────────────────────────────────────
-    // SOFA  — honey-mustard boucle sectional, sled base, deep cushions
-    // ───────────────────────────────────────────────────────────────
-    const sofaItem = scene.items.find(i=>i.id==='s-sofa');
-    const sofaGrp  = group(sofaItem);
-    const boucle   = mat(0xC49A28, 0.93);
-    const boucleDk = mat(0xA07C18, 0.95);
-    const slimMet  = mat(0x181008, 0.65, 0.45);
-    // seat platform
-    addToGroup(sofaGrp, mesh(box(3.2,0.20,1.48), boucleDk), 0, 0.10, 0);
-    // three seat cushions
-    for (let i=0; i<3; i++)
-      addToGroup(sofaGrp, mesh(box(0.96,0.22,1.38), boucle), -1.04+i*1.04, 0.31, 0.02);
-    // backrest frame
-    addToGroup(sofaGrp, mesh(box(3.2,0.54,0.16), boucleDk), 0, 0.58, -0.64);
-    // three back cushions
-    for (let i=0; i<3; i++)
-      addToGroup(sofaGrp, mesh(box(0.96,0.48,0.13), boucle), -1.04+i*1.04, 0.57, -0.615);
-    // arm panels
-    addToGroup(sofaGrp, mesh(box(0.14,0.52,1.48), boucleDk), -1.57, 0.36, 0);
-    addToGroup(sofaGrp, mesh(box(0.14,0.52,1.48), boucleDk),  1.57, 0.36, 0);
-    // sled base rails
-    addToGroup(sofaGrp, mesh(box(3.05,0.06,0.06), slimMet), 0, 0.03, -0.56);
-    addToGroup(sofaGrp, mesh(box(3.05,0.06,0.06), slimMet), 0, 0.03,  0.56);
-    sofaGrp.position.set(-0.4, 0, 2.5);
+    // CHAIR — ivory boucle · walnut frame + crossbars · brass arm · piping
+    const chItem=scene.items.find(i=>i.id==='s-chair'); const chGrp=grp(chItem);
+    const chIv=M(0xDDD4B4,0.91), chIvD=M(0xB0A888,0.93), chWn=M(0x3A2010,0.60,0.09), chBr=M(0xC8A028,0.26,0.92);
+    put(chGrp,mk(bx(1.02,0.09,0.97),chWn),0,0.375,0);
+    put(chGrp,mk(bx(0.90,0.21,0.87),chIv),0,0.525,0.03);
+    put(chGrp,mk(bx(0.91,0.024,0.88),chIvD),0,0.635,0.03);
+    put(chGrp,mk(bx(0.066,0.72,0.066),chWn),-0.46,0.74,-0.43);
+    put(chGrp,mk(bx(0.066,0.72,0.066),chWn), 0.46,0.74,-0.43);
+    put(chGrp,mk(bx(1.02,0.068,0.068),chWn),0,1.10,-0.43);
+    put(chGrp,mk(bx(0.84,0.038,0.038),chWn),0,0.83,-0.43);
+    put(chGrp,mk(bx(0.83,0.62,0.10),chIv),0,0.76,-0.39);
+    put(chGrp,mk(bx(0.84,0.022,0.10),chIvD),0,1.08,-0.39);
+    [[-0.43,-0.40],[0.43,-0.40],[-0.43,0.41],[0.43,0.41]].forEach(([lx,lz])=>put(chGrp,mk(cy(0.020,0.030,0.34,10),chWn),lx,0.17,lz));
+    put(chGrp,mk(bx(0.052,0.052,0.92),chBr),0.545,0.74,0.02);
+    put(chGrp,mk(cy(0.025,0.025,0.28,10),chBr),0.545,0.56,-0.40);
+    chGrp.position.set(2.9,0,2.4);
 
-    // ───────────────────────────────────────────────────────────────
-    // CHAIR  — ivory boucle, smoked-walnut tapered legs, brass arm
-    // ───────────────────────────────────────────────────────────────
-    const chairItem = scene.items.find(i=>i.id==='s-chair');
-    const chairGrp  = group(chairItem);
-    const ivory   = mat(0xDDD4B4, 0.90);
-    const ivoryDk = mat(0xC2BA9C, 0.92);
-    const walnut  = mat(0x3A2010, 0.62, 0.08);
-    // seat frame
-    addToGroup(chairGrp, mesh(box(1.0,0.10,0.95), walnut), 0, 0.38, 0);
-    // seat cushion
-    addToGroup(chairGrp, mesh(box(0.92,0.17,0.88), ivory), 0, 0.52, 0.02);
-    // back frame
-    addToGroup(chairGrp, mesh(box(1.0,0.08,0.10), walnut), 0, 0.83, -0.415);
-    addToGroup(chairGrp, mesh(box(0.08,0.68,0.10), walnut), -0.46, 0.66, -0.415);
-    addToGroup(chairGrp, mesh(box(0.08,0.68,0.10), walnut),  0.46, 0.66, -0.415);
-    // back cushion
-    addToGroup(chairGrp, mesh(box(0.84,0.62,0.08), ivory), 0, 0.65, -0.375);
-    // four tapered legs
-    [[-0.42,-0.38],[0.42,-0.38],[-0.42,0.38],[0.42,0.38]].forEach(([lx,lz]) => {
-      addToGroup(chairGrp, mesh(cyl(0.022,0.032,0.36,8), walnut), lx, 0.18, lz);
-    });
-    // brass arm (right side, single horizontal rail + drop)
-    addToGroup(chairGrp, mesh(box(0.055,0.055,0.88), brassM), 0.53, 0.72, 0.01);
-    addToGroup(chairGrp, mesh(cyl(0.027,0.027,0.30,8), brassM), 0.53, 0.54, -0.38);
-    chairGrp.position.set(2.9, 0, 2.4);
+    // COFFEE TABLE — marble top · edge lip · wood shelf · slender legs
+    const tItem=scene.items.find(i=>i.id==='s-table'); const tGrp=grp(tItem);
+    const tMb=M(0xECE8DC,0.20,0.05), tWd=M(0x907050,0.78), tLg=M(0x242018,0.50,0.40);
+    put(tGrp,mk(bx(2.04,0.08,1.16),tMb),0,0.415,0);
+    put(tGrp,mk(bx(2.08,0.024,1.20),M(0xD8D4C8,0.22,0.05)),0,0.457,0);
+    put(tGrp,mk(bx(1.76,0.055,0.98),tWd),0,0.130,0);
+    [[-0.90,-0.47],[0.90,-0.47],[-0.90,0.47],[0.90,0.47]].forEach(([lx,lz])=>put(tGrp,mk(cy(0.033,0.033,0.38,12),tLg),lx,0.19,lz));
+    tGrp.position.set(0.5,0,3.6);
 
-    // ───────────────────────────────────────────────────────────────
-    // COFFEE TABLE  — honed marble top, lower shelf, slender legs
-    // ───────────────────────────────────────────────────────────────
-    const tableItem = scene.items.find(i=>i.id==='s-table');
-    const tableGrp  = group(tableItem);
-    const marble  = mat(0xECE8DC, 0.22, 0.04);
-    const oakWarm = mat(0x907050, 0.78);
-    const darkLeg = mat(0x302820, 0.52, 0.35);
-    // top slab (marble)
-    addToGroup(tableGrp, mesh(box(2.0,0.07,1.14), marble), 0, 0.42, 0);
-    // lower shelf (wood)
-    addToGroup(tableGrp, mesh(box(1.74,0.05,0.96), oakWarm), 0, 0.14, 0);
-    // four slender legs
-    [[-0.88,-0.46],[0.88,-0.46],[-0.88,0.46],[0.88,0.46]].forEach(([lx,lz]) => {
-      addToGroup(tableGrp, mesh(cyl(0.036,0.036,0.38,10), darkLeg), lx, 0.19, lz);
-    });
-    tableGrp.position.set(0.5, 0, 3.6);
+    // ARC LAMP — marble base · brass pole + bezier arm · frosted globe
+    const lItem=scene.items.find(i=>i.id==='s-lamp'); const lGrp=grp(lItem);
+    const lBr=M(0xC8A030,0.24,0.92), lMb=M(0xE2DAC8,0.34,0.09);
+    put(lGrp,mk(cy(0.30,0.34,0.13,24),lMb),0,0.065,0);
+    put(lGrp,mk(cy(0.23,0.23,0.06,24),M(0xCEC6B4,0.38,0.12)),0,0.12,0);
+    put(lGrp,mk(cy(0.025,0.025,2.30,10),lBr),0,1.29,0);
+    const arcC=new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0,2.46,0), new THREE.Vector3(0.75,2.88,-0.20), new THREE.Vector3(1.38,2.54,-0.40));
+    const armO=new THREE.Mesh(new THREE.TubeGeometry(arcC,16,0.026,10,false),lBr);
+    armO.castShadow=true; armO.userData.item=lItem; lGrp.add(armO);
+    put(lGrp,mk(new THREE.SphereGeometry(0.25,22,22),M(0xFFF8E0,0.10,0,{emissive:0xFFCC44,emissiveIntensity:1.3,transparent:true,opacity:0.87})),1.38,2.50,-0.40);
+    lGrp.position.set(-4.3,0,2.1);
 
-    // ───────────────────────────────────────────────────────────────
-    // ARC LAMP  — marble base, brass pole + arm, frosted globe
-    // ───────────────────────────────────────────────────────────────
-    const lampItem  = scene.items.find(i=>i.id==='s-lamp');
-    const lampGrp   = group(lampItem);
-    const brassLamp = mat(0xC8A030, 0.25, 0.90);
-    const marbLamp  = mat(0xE2DAC8, 0.35, 0.08);
-    // base disc
-    addToGroup(lampGrp, mesh(cyl(0.28,0.32,0.13,22), marbLamp), 0, 0.065, 0);
-    // base weight ring
-    addToGroup(lampGrp, mesh(cyl(0.22,0.22,0.06,22), mat(0xD0C8B8,0.4,0.1)), 0, 0.12, 0);
-    // pole
-    addToGroup(lampGrp, mesh(cyl(0.026,0.026,2.28,8), brassLamp), 0, 1.28, 0);
-    // arc arm
-    const arcCurve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 2.44, 0),
-      new THREE.Vector3(0.7, 2.82, -0.18),
-      new THREE.Vector3(1.36, 2.52, -0.38)
-    );
-    const armMesh2 = new THREE.Mesh(new THREE.TubeGeometry(arcCurve,14,0.027,8,false), brassLamp);
-    armMesh2.userData.item = lampItem;
-    lampGrp.add(armMesh2);
-    // globe
-    const globeM = mat(0xFFF6D8, 0.12, 0, { emissive:0xFFCC44, emissiveIntensity:1.1, transparent:true, opacity:0.86 });
-    addToGroup(lampGrp, mesh(new THREE.SphereGeometry(0.24,20,20), globeM), 1.36, 2.5, -0.38);
-    lampGrp.position.set(-4.3, 0, 2.1);
-
-    // ── Raycasting — recursive so children are hit ──
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
+    // RAYCASTING
+    const raycaster=new THREE.Raycaster(); const mouse=new THREE.Vector2();
     function onClick(e) {
-      const rect = mount.getBoundingClientRect();
-      mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-      mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, cam);
-      const hits = raycaster.intersectObjects(
-        [consoleGrp,sofaGrp,chairGrp,tableGrp,lampGrp], true
-      );
-      if (hits.length) {
-        const item = hits[0].object.userData.item;
-        if (item) onHotspot(item, { x:e.clientX, y:e.clientY });
-      }
+      const rect=mount.getBoundingClientRect();
+      mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+      mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(mouse,cam);
+      const hits=raycaster.intersectObjects([cGrp,sGrp,chGrp,tGrp,lGrp],true);
+      if(hits.length){ const item=hits[0].object.userData.item; if(item) onHotspot(item,{x:e.clientX,y:e.clientY}); }
     }
-    renderer.domElement.addEventListener('click', onClick);
+    renderer.domElement.addEventListener('click',onClick);
 
-    // ── Resize ──
-    const ro = new ResizeObserver(() => {
-      const W2 = mount.clientWidth, H2 = mount.clientHeight;
-      cam.aspect = W2/H2; cam.updateProjectionMatrix();
-      renderer.setSize(W2, H2);
+    // RESIZE
+    const ro=new ResizeObserver(()=>{
+      const W2=mount.clientWidth,H2=mount.clientHeight;
+      cam.aspect=W2/H2; cam.updateProjectionMatrix(); renderer.setSize(W2,H2);
     });
     ro.observe(mount);
 
-    // ── Render loop ──
+    // RENDER LOOP + CAMERA LERP
     let raf;
-    const animate = () => { raf = requestAnimationFrame(animate); renderer.render(s, cam); };
+    function animate() {
+      raf=requestAnimationFrame(animate);
+      camPos.lerp(camPosT,0.055); camLook.lerp(camLookT,0.055);
+      cam.position.copy(camPos); cam.lookAt(camLook);
+      renderer.render(sc,cam);
+    }
     animate();
 
-    threeRef.current = { renderer, raf, ro, onClick };
+    threeRef.current = {
+      renderer, raf, ro, onClick,
+      spotlight(id){ const sp=spots[id]; if(sp){camPosT.copy(sp.pos);camLookT.copy(sp.look);} },
+      overview()   { camPosT.copy(OV_POS); camLookT.copy(OV_LOOK); },
+    };
     return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-      renderer.domElement.removeEventListener('click', onClick);
+      cancelAnimationFrame(raf); ro.disconnect();
+      renderer.domElement.removeEventListener('click',onClick);
       renderer.dispose();
-      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
+      if(mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
     };
   }, []);
 
-  // ── Veil animation ──
+  // VEIL
   useEffect(() => {
-    const el = veilRef.current;
-    if (!el) return;
-    if (isActive) {
-      el.getAnimations().forEach(a => a.cancel());
-      el.style.opacity = '1';
-      el.animate([{ opacity:1 },{ opacity:0 }],
-        { duration:1600, delay:380, easing:'cubic-bezier(0.65,0,0.35,1)', fill:'forwards' });
-    } else {
-      el.getAnimations().forEach(a => a.cancel());
-      el.style.opacity = '1';
-    }
+    const el=veilRef.current; if(!el) return;
+    if(isActive){
+      el.getAnimations().forEach(a=>a.cancel()); el.style.opacity='1';
+      el.animate([{opacity:1},{opacity:0}],{duration:1600,delay:380,easing:'cubic-bezier(0.65,0,0.35,1)',fill:'forwards'});
+    } else { el.getAnimations().forEach(a=>a.cancel()); el.style.opacity='1'; }
   }, [isActive]);
+
+  function handleHotspot(item,pos){ setSpotId(item.id); threeRef.current?.spotlight(item.id); onHotspot(item,pos); }
 
   return (
     <>
-      <div ref={mountRef} style={{ position:'absolute', inset:0 }}/>
+      <div ref={mountRef} style={{position:'absolute',inset:0}}/>
       <div className="room-veil" ref={veilRef}/>
-      <div className="scene-label">
-        <div className="eyebrow">{scene.eyebrow}</div>
-        <h1 dangerouslySetInnerHTML={{ __html: scene.headline }}/>
-        {scene.blurb && <p>{scene.blurb}</p>}
-      </div>
-      {scene.items.map(item => (
+      {!spotId && (
+        <div className="scene-label">
+          <div className="eyebrow">{scene.eyebrow}</div>
+          <h1 dangerouslySetInnerHTML={{__html:scene.headline}}/>
+          {scene.blurb && <p>{scene.blurb}</p>}
+        </div>
+      )}
+      {spotId && (
+        <button onClick={()=>{setSpotId(null);threeRef.current?.overview();}}
+          style={{position:'absolute',bottom:32,left:'50%',transform:'translateX(-50%)',
+            zIndex:20,background:'none',border:'1px solid rgba(240,234,224,.30)',
+            color:'rgba(240,234,224,.70)',fontSize:10,letterSpacing:'.2em',
+            textTransform:'uppercase',padding:'10px 30px',borderRadius:40,
+            cursor:'pointer',backdropFilter:'blur(8px)'}}>
+          ← all pieces
+        </button>
+      )}
+      {scene.items.map(item=>(
         <button key={item.id+'-hot'} className={"hotspot"+(item.hot.dark?" dark":"")}
-          style={{ left:item.hot.x, top:item.hot.y }}
-          onClick={e => { const r=e.currentTarget.getBoundingClientRect(); onHotspot(item,{ x:r.left+r.width/2, y:r.top+r.height/2 }); }}
+          style={{left:item.hot.x,top:item.hot.y}}
+          onClick={e=>{const r=e.currentTarget.getBoundingClientRect();handleHotspot(item,{x:r.left+r.width/2,y:r.top+r.height/2});}}
           aria-label={"open "+item.info.name}>
           <span className="pulse"/><span className="dot"/>
         </button>
       ))}
       <div className="moodboard-rail">
         <span className="count">{scene.items.length} pieces</span>
-        <span className="hint">tap a dot to see the source</span>
+        <span className="hint">tap a dot · click a piece</span>
       </div>
     </>
   );
