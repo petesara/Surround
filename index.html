@@ -63,31 +63,62 @@ body{color:#FBF7F0;font-family:var(--font-sans);cursor:none;-webkit-font-smoothi
 .scene-area{position:relative;overflow:hidden;margin:0 32px;border-radius:22px;isolation:isolate;}
 .scene{position:absolute;inset:0;opacity:0;pointer-events:none;will-change:opacity,transform,filter;}
 
-/* ── Room ── */
+/* ── Room (3-D perspective) ── */
 .room{
-  position:absolute;inset:0;display:grid;grid-template-rows:62% 38%;
+  position:absolute;inset:0;
   background:var(--wall-color,var(--ink-700));overflow:hidden;
 }
+
+/* Back wall */
 .room .wall{
-  background:var(--wall-color);position:relative;overflow:hidden;
+  position:absolute;left:0;right:0;top:0;height:57%;
+  background:var(--wall-color);overflow:hidden;
   background-image:
     radial-gradient(ellipse at 80% 22%,rgba(255,255,255,.09) 0%,transparent 48%),
     radial-gradient(ellipse at 10% 85%,rgba(0,0,0,.18) 0%,transparent 38%),
     linear-gradient(180deg,rgba(0,0,0,.07) 0%,transparent 22%);
 }
-.room .floor{
-  background:var(--floor-color,#0E0B16);position:relative;
-  background-image:
-    linear-gradient(180deg,rgba(0,0,0,.30) 0%,transparent 28%),
-    linear-gradient(180deg,transparent 52%,rgba(0,0,0,.44) 100%),
-    linear-gradient(180deg,rgba(255,255,255,.032) 0%,transparent 18%),
-    repeating-linear-gradient(90deg,transparent 0,transparent 66px,rgba(255,255,255,.016) 66px,rgba(255,255,255,.016) 67px);
+/* Side-wall depth shadows on wall */
+.room .wall::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.22) 0%,transparent 10%),
+    linear-gradient(-90deg,rgba(0,0,0,.22) 0%,transparent 10%);
 }
-/* horizon glow */
+
+/* Herringbone oak floor — perspective-tilted for depth illusion */
+.room .floor{
+  position:absolute;left:-6%;right:-6%;top:54%;bottom:0;
+  background-color:#BF9B5A;
+  background-image:
+    linear-gradient(180deg,rgba(0,0,0,.38) 0%,rgba(0,0,0,.04) 28%,transparent 52%),
+    linear-gradient(180deg,transparent 68%,rgba(0,0,0,.18) 100%),
+    repeating-linear-gradient(90deg,transparent 0,transparent 46px,rgba(0,0,0,.08) 46px,rgba(0,0,0,.08) 48px),
+    repeating-linear-gradient(0deg,transparent 0,transparent 94px,rgba(0,0,0,.06) 94px,rgba(0,0,0,.06) 96px);
+  transform-origin:top center;
+  transform:perspective(700px) rotateX(5deg);
+}
+
+/* Baseboard / skirting */
+.skirting{
+  position:absolute;left:0;right:0;
+  top:calc(57% - 5px);height:14px;z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.10) 65%,transparent);
+}
+
+/* Horizon accent line */
 .room::before{
-  content:'';position:absolute;left:0;right:0;top:62%;height:1px;
+  content:'';position:absolute;left:0;right:0;top:57%;height:1px;
   background:linear-gradient(90deg,transparent,var(--accent-color,var(--lilac-300)) 50%,transparent);
-  opacity:.4;z-index:5;
+  opacity:.5;z-index:5;
+}
+/* Side vignette + floor depth */
+.room::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:7;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.18) 0%,transparent 11%),
+    linear-gradient(-90deg,rgba(0,0,0,.18) 0%,transparent 11%),
+    linear-gradient(180deg,transparent 55%,rgba(0,0,0,.14) 100%);
 }
 
 /* ── O-window ── */
@@ -521,15 +552,63 @@ const Counter = ({ color='#181420', top='#C49A7A' }) => (
 
 // ── Photo furniture components ──────────────────────────────────
 
+// Canvas flood-fill background removal for product photos
+function useBgRemoved(src) {
+  const [out, setOut] = useState(src);
+  useEffect(() => {
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const W = img.naturalWidth, H = img.naturalHeight;
+        const cvs = document.createElement('canvas');
+        cvs.width = W; cvs.height = H;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const id = ctx.getImageData(0, 0, W, H);
+        const px = id.data;
+        // Sample background color from 8 edge points
+        const pts = [[0,0],[W-1,0],[0,H-1],[W-1,H-1],[W>>1,0],[W>>1,H-1],[0,H>>1],[W-1,H>>1]];
+        let sr=0,sg=0,sb=0;
+        pts.forEach(([x,y])=>{ const i=(y*W+x)*4; sr+=px[i]; sg+=px[i+1]; sb+=px[i+2]; });
+        const n=pts.length, BR=sr/n|0, BG=sg/n|0, BB=sb/n|0;
+        // Flood-fill from all edges, remove pixels within tolerance
+        const vis = new Uint8Array(W*H);
+        const stk = [];
+        for(let x=0;x<W;x++){ stk.push(x,0); stk.push(x,H-1); }
+        for(let y=1;y<H-1;y++){ stk.push(0,y); stk.push(W-1,y); }
+        const T2 = 58*58;
+        while(stk.length) {
+          const y=stk.pop(), x=stk.pop();
+          if(x<0||x>=W||y<0||y>=H) continue;
+          const p=y*W+x; if(vis[p]) continue; vis[p]=1;
+          const i=p*4; if(px[i+3]===0) continue;
+          const dr=px[i]-BR, dg=px[i+1]-BG, db=px[i+2]-BB;
+          if(dr*dr+dg*dg+db*db < T2) {
+            px[i+3]=0;
+            stk.push(x-1,y, x+1,y, x,y-1, x,y+1);
+          }
+        }
+        ctx.putImageData(id,0,0);
+        setOut(cvs.toDataURL('image/png'));
+      } catch(e) { /* canvas tainted or cross-origin — keep original */ }
+    };
+    img.src = src;
+  }, [src]);
+  return out;
+}
+
 function PhotoFurn({ src, mask, imgStyle }) {
+  const cleanSrc = useBgRemoved(src);
+  const maskStyle = mask ? { WebkitMaskImage:mask, maskImage:mask } : {};
   return (
     <img
-      src={src}
+      src={cleanSrc}
       style={{
         display:'block', width:'100%', height:'100%',
         objectFit:'contain', objectPosition:'center bottom',
-        WebkitMaskImage:mask, maskImage:mask,
-        filter:'drop-shadow(0 14px 38px rgba(8,6,16,.6)) drop-shadow(0 4px 10px rgba(8,6,16,.3))',
+        ...maskStyle,
+        filter:'drop-shadow(0 18px 44px rgba(8,6,16,.7)) drop-shadow(0 4px 12px rgba(8,6,16,.35))',
         ...imgStyle,
       }}
     />
@@ -537,14 +616,15 @@ function PhotoFurn({ src, mask, imgStyle }) {
 }
 
 function ArcLampPhoto({ src }) {
+  const cleanSrc = useBgRemoved(src);
   return (
     <div style={{
       width:'100%', height:'100%',
-      backgroundImage:'url('+src+')',
+      backgroundImage:'url('+cleanSrc+')',
       backgroundSize:'290% auto',
       backgroundPosition:'3% 0%',
       backgroundRepeat:'no-repeat',
-      filter:'drop-shadow(3px 0 22px rgba(8,6,16,.5))',
+      filter:'drop-shadow(3px 0 24px rgba(8,6,16,.55))',
     }}/>
   );
 }
@@ -584,25 +664,25 @@ const SCENES = [
           blurb:'A single arc over the salon. The globe casts a warm pool without touching the ceiling.',
           meta:[['Height','70″'],['Shade','frosted globe, ⌀ 12″'],['Base','honed white marble'],['Bulb','LED, 2700 K']] }},
       { id:'s-console', Comp:'PhotoFurn', x:'2%',y:'17%',w:'40%',h:'30%',
-        props:{ src:IMG_CONSOLE, mask:'radial-gradient(ellipse 90% 76% at 50% 50%, black 52%, transparent 82%)' },
+        props:{ src:IMG_CONSOLE },
         hot:{ x:'20%',y:'34%' },
         info:{ kicker:'STORAGE', name:'Julius media console', design:'cerused dark oak · satin brass pulls · 4-door',
           blurb:'A long cerused oak credenza anchoring the left wall. Low-profile, brass-pulled, the piece the room organises around.',
           meta:[['Width','68″'],['Height','21″'],['Depth','17″'],['Investment','from $3,200']] }},
       { id:'s-sofa', Comp:'PhotoFurn', x:'12%',y:'46%',w:'52%',h:'40%',
-        props:{ src:IMG_SOFA, mask:'radial-gradient(ellipse 88% 74% at 50% 64%, black 46%, transparent 82%)' },
+        props:{ src:IMG_SOFA },
         hot:{ x:'36%',y:'62%' },
         info:{ kicker:'SEATING', name:'Modular sectional', design:'honey boucle · sled base · 3-module',
           blurb:'A three-module sectional in honey-toned boucle. Reconfigurable, deep-seated, built for actual afternoons.',
           meta:[['Modules','3 (expandable)'],['Upholstery','boucle, honey'],['Configuration','L or straight'],['Investment','from $6,400']] }},
       { id:'s-chair', Comp:'PhotoFurn', x:'62%',y:'49%',w:'23%',h:'34%',
-        props:{ src:IMG_CHAIR, mask:'radial-gradient(ellipse 74% 86% at 50% 58%, black 42%, transparent 80%)' },
+        props:{ src:IMG_CHAIR },
         hot:{ x:'73%',y:'62%' },
         info:{ kicker:'SEATING', name:'Colby boucle accent chair', design:'smoked walnut · brass arm detail · ivory boucle',
           blurb:'A walnut lounge chair with a single brass arm. The ivory boucle upholstery is soft, the legs hand-turned.',
           meta:[['Frame','smoked walnut'],['Upholstery','ivory boucle'],['Arm','satin brass'],['Investment','from $2,100']] }},
       { id:'s-table', Comp:'PhotoFurn', x:'18%',y:'67%',w:'38%',h:'24%',
-        props:{ src:IMG_TABLE, mask:'radial-gradient(ellipse 88% 74% at 50% 52%, black 48%, transparent 82%)' },
+        props:{ src:IMG_TABLE },
         hot:{ x:'36%',y:'77%' },
         info:{ kicker:'TABLE', name:'Rounded oak coffee table', design:'oak body · honed marble top · open shelf',
           blurb:'A rounded-corner coffee table with a honed marble top and an open lower shelf. Grounding.',
@@ -925,6 +1005,7 @@ function RoomScene({ scene, onHotspot, isActive }) {
           <div className="O-window"/>
         </div>
         <div className="floor"/>
+        <div className="skirting"/>
       </div>
       <div className="room-veil" ref={veilRef}/>
       <div className="scene-label">
