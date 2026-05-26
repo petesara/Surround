@@ -776,7 +776,7 @@ function FlyingO({ active, onDone }) {
       Math.hypot(oCx, vh - oCy),
       Math.hypot(vw - oCx, vh - oCy)
     );
-    const diameter = farthest * 2 * 1.06; // 6 % margin so no gap at edges
+    const diameter = farthest * 2 * 1.15; // 15% margin — no gap at any edge
 
     // Position the flying O centred exactly over the O-big
     Object.assign(el.style, {
@@ -788,19 +788,19 @@ function FlyingO({ active, onDone }) {
       transform: `scale(${oBigSize / diameter})`,
     });
 
+    const s0 = oBigSize / diameter;
     const anim = el.animate([
       // snap on at O-big size
-      { transform: `scale(${oBigSize / diameter})`,       opacity: 0,    offset: 0 },
-      { transform: `scale(${oBigSize / diameter})`,       opacity: 0.96, offset: 0.035 },
-      // expand to fill screen
-      { transform: 'scale(1)',                            opacity: 0.97, offset: 0.46 },
-      // hold
-      { transform: 'scale(1)',                            opacity: 0.97, offset: 0.60 },
-      // fade out to reveal room
-      { transform: 'scale(1)',                            opacity: 0,    offset: 1 },
+      { transform: `scale(${s0})`, opacity: 0,    offset: 0,    easing: 'linear' },
+      { transform: `scale(${s0})`, opacity: 1,    offset: 0.04, easing: 'cubic-bezier(0.22,1,0.36,1)' },
+      // fast iris-open with spring ease-out
+      { transform: 'scale(1)',     opacity: 1,    offset: 0.50, easing: 'linear' },
+      // hold full-screen
+      { transform: 'scale(1)',     opacity: 1,    offset: 0.62, easing: 'ease-in' },
+      // ease-in fade to reveal room underneath
+      { transform: 'scale(1)',     opacity: 0,    offset: 1 },
     ], {
-      duration: 2800,
-      easing:   'cubic-bezier(0.65, 0, 0.35, 1)',
+      duration: 2500,
       fill:     'forwards',
     });
 
@@ -1485,9 +1485,7 @@ function Stage() {
     if (idx === 0 && target === 1 && !transitioning.current) {
       transitioning.current = true;
       setFlyingO(true);
-      // Wait for O to fully fade out before activating the room
-      // (O reaches opacity 0 at 2800ms; 2650ms gives a clean handoff)
-      setTimeout(() => setIdx(1), 2650);
+      setIdx(1); // switch immediately — FlyingO at z-index:200 covers the swap
     } else {
       setIdx(target);
     }
