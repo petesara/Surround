@@ -796,9 +796,9 @@ function FlyingO({ active, onDone }) {
       // fast iris-open with spring ease-out
       { transform: 'scale(1)',     opacity: 1,    offset: 0.50, easing: 'linear' },
       // hold full-screen
-      { transform: 'scale(1)',     opacity: 1,    offset: 0.62, easing: 'ease-in' },
-      // ease-in fade to reveal room underneath
-      { transform: 'scale(1)',     opacity: 0,    offset: 1 },
+      { transform: 'scale(1)',     opacity: 1,    offset: 0.62, easing: 'cubic-bezier(0.4,0,1,1)' },
+      // fast reveal — completes at 88% so room appears quickly
+      { transform: 'scale(1)',     opacity: 0,    offset: 0.88 },
     ], {
       duration: 2500,
       fill:     'forwards',
