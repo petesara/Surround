@@ -685,31 +685,31 @@ const SCENES = [
     items:[
       { id:'b-rug', Comp:'PhotoFurn', x:'20%',y:'76%',w:'56%',h:'19%',
         props:{ src:IMG_BRUG, imgStyle:{ objectFit:'fill', borderRadius:'4px', filter:'drop-shadow(0 6px 18px rgba(4,8,6,.55))' } },
-        hot:{ x:'14%',y:'88%' },
+        hot:{ x:'21%',y:'86%' },
         info:{ kicker:'RUG', name:'Hand-loomed plum wool', design:'100% wool \u00b7 hand-loomed \u00b7 India',
           blurb:'A deep aubergine field, loomed flat with a soft sheen \u2014 the dark pool the bed floats on.',
           meta:[['Size',"5\u2032 \u00d7 7\u2032 6\u2033"],['Fibre','wool, hand-loomed'],['Pile','low, dense'],['Tone','plum \u00b7 aubergine']] }},
       { id:'b-bed', Comp:'PhotoFurn', x:'26%',y:'42%',w:'44%',h:'48%',
         props:{ src:IMG_BBED },
-        hot:{ x:'44%',y:'70%',dark:true },
+        hot:{ x:'44%',y:'69%',dark:true },
         info:{ kicker:'BED', name:'Moss velvet platform bed', design:'olive cotton-velvet \u00b7 slab headboard \u00b7 low profile',
           blurb:'Fully upholstered in olive velvet \u2014 a soft low block that holds the linen like a nest.',
           meta:[['Upholstery','olive cotton-velvet'],['Headboard','slab, piped edge'],['Size','queen / king'],['Base','upholstered plinth']] }},
       { id:'b-dresser', Comp:'PhotoFurn', x:'2%',y:'52%',w:'22%',h:'38%',
         props:{ src:IMG_BDRESSER },
-        hot:{ x:'28%',y:'56%',dark:true },
+        hot:{ x:'28%',y:'45%',dark:true },
         info:{ kicker:'STORAGE', name:'Nine-drawer burl dresser', design:'mappa burl \u00b7 arched cubbies \u00b7 rounded waterfall edge',
           blurb:'Nine drawers of swirling burl below three arched cubbies. The waterfall edge softens the whole silhouette.',
           meta:[['Width','59.05\u2033'],['Height','31.49\u2033'],['Depth','14.96\u2033'],['Drawer','18.11\u2033 \u00d7 11.81\u2033 \u00d7 7.12\u2033']] }},
       { id:'b-stool', Comp:'PhotoFurn', x:'74%',y:'66%',w:'8%',h:'24%',
         props:{ src:IMG_BSTOOL },
-        hot:{ x:'91%',y:'77%' },
+        hot:{ x:'91%',y:'83%' },
         info:{ kicker:'OBJECT', name:'Ceramic tile side stool', design:'glazed stoneware \u00b7 espresso grid tile',
           blurb:'A glazed ceramic block in deep espresso, gridded in fine white lines \u2014 bedside table, perch, or sculpture.',
           meta:[['Material','glazed stoneware'],['Finish','gloss, grid relief'],['Use','side table / stool'],['Care','wipe clean']] }},
       { id:'b-tree', Comp:'PhotoFurn', x:'60%',y:'8%',w:'20%',h:'50%',
         props:{ src:IMG_BTREE },
-        hot:{ x:'60%',y:'34%' },
+        hot:{ x:'60%',y:'14%' },
         info:{ kicker:'GREENERY', name:'Faux olive tree, seven feet', design:'silk foliage \u00b7 natural trunk \u00b7 stoneware planter',
           blurb:'A seven-foot olive in a stone planter \u2014 the one green thing that never asks for the harbour light.',
           meta:[['Height','84\u2033'],['Foliage','silk blend'],['Planter','stoneware'],['Care','dust seasonally']] }},
@@ -1023,7 +1023,7 @@ function RoomScene({ scene, onHotspot, isActive }) {
 }
 
 // ── Three.js salon scene ─────────────────────────────────────────
-function PhotoRoomScene({ scene, isActive, onHotspot, src, bgPos, fit, aspect }) {
+function PhotoRoomScene({ scene, isActive, onHotspot, src, bgPos }) {
   const veilRef = useRef(null);
 
   useEffect(() => {
@@ -1034,70 +1034,34 @@ function PhotoRoomScene({ scene, isActive, onHotspot, src, bgPos, fit, aspect })
     } else { el.getAnimations().forEach(a=>a.cancel()); el.style.opacity='1'; }
   }, [isActive]);
 
-  const hotspots = scene.items.map(item=>(
-    <button key={item.id+'-hot'} className={"hotspot"+(item.hot.dark?" dark":"")}
-      style={{left:item.hot.x,top:item.hot.y,position:'absolute',zIndex:20}}
-      onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();onHotspot(item,{x:r.left+r.width/2,y:r.top+r.height/2});}}
-      aria-label={"open "+item.info.name}>
-      <span className="pulse"/><span className="dot"/>
-    </button>
-  ));
-
   return (
     <>
-      {fit==='contain' ? (
-        <>
-          {/* blurred copy fills the side bars */}
-          <div style={{
-            position:'absolute',inset:0,
-            backgroundImage:'url('+src+')',
-            backgroundSize:'cover',
-            backgroundPosition:'center center',
-            filter:'blur(46px) brightness(.45) saturate(1.1)',
-            transform:'scale(1.12)',
-            pointerEvents:'none',
-          }}/>
-          {/* whole photo, fit by height, centred — hotspots anchor to it */}
-          <div style={{
-            position:'absolute',top:0,bottom:0,left:'50%',
-            transform:'translateX(-50%)',
-            height:'100%',aspectRatio:aspect||'1 / 1',
-            zIndex:5,
-          }}>
-            <div style={{
-              position:'absolute',inset:0,
-              backgroundImage:'url('+src+')',
-              backgroundSize:'cover',
-              backgroundPosition:'center center',
-              boxShadow:'0 0 80px rgba(0,0,0,.55)',
-              pointerEvents:'none',
-            }}/>
-            {hotspots}
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{
-            position:'absolute',inset:0,
-            backgroundImage:'url('+src+')',
-            backgroundSize:'cover',
-            backgroundPosition:bgPos||'center center',
-            pointerEvents:'none',
-          }}/>
-          <div style={{
-            position:'absolute',inset:0,zIndex:3,
-            background:'linear-gradient(135deg,rgba(10,20,14,.55) 0%,rgba(10,20,14,.08) 55%,transparent 80%)',
-            pointerEvents:'none',
-          }}/>
-          {hotspots}
-        </>
-      )}
+      <div style={{
+        position:'absolute',inset:0,
+        backgroundImage:'url('+src+')',
+        backgroundSize:'cover',
+        backgroundPosition:bgPos||'center center',
+        pointerEvents:'none',
+      }}/>
+      <div style={{
+        position:'absolute',inset:0,zIndex:3,
+        background:'linear-gradient(135deg,rgba(10,20,14,.55) 0%,rgba(10,20,14,.08) 55%,transparent 80%)',
+        pointerEvents:'none',
+      }}/>
       <div className="room-veil" ref={veilRef}/>
       <div className="scene-label">
         <div className="eyebrow">{scene.eyebrow}</div>
         <h1 dangerouslySetInnerHTML={{__html:scene.headline}}/>
         {scene.blurb && <p>{scene.blurb}</p>}
       </div>
+      {scene.items.map(item=>(
+        <button key={item.id+'-hot'} className={"hotspot"+(item.hot.dark?" dark":"")}
+          style={{left:item.hot.x,top:item.hot.y,position:'absolute',zIndex:20}}
+          onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();onHotspot(item,{x:r.left+r.width/2,y:r.top+r.height/2});}}
+          aria-label={"open "+item.info.name}>
+          <span className="pulse"/><span className="dot"/>
+        </button>
+      ))}
       <div className="moodboard-rail">
         <span className="count">{scene.items.length} pieces</span>
         <span className="hint">tap a dot</span>
@@ -1720,7 +1684,7 @@ function Stage() {
           <SceneSlot key={s.id} scene={s} isActive={i===idx} isBehind={i<idx}>
             {s.kind==='opening' && <OpeningScene/>}
             {s.kind==='room' && s.id==='salon' && <SalonPhotoScene scene={s} isActive={i===idx} onHotspot={(item,pos)=>{ setHot(item); setHotPos(pos); }}/>}
-            {s.kind==='room' && s.id==='bedroom' && <PhotoRoomScene scene={s} src={IMG_BEDROOM} fit="contain" aspect="1 / 1" isActive={i===idx} onHotspot={(item,pos)=>{ setHot(item); setHotPos(pos); }}/>}
+            {s.kind==='room' && s.id==='bedroom' && <PhotoRoomScene scene={s} src={IMG_BEDROOM} bgPos="center 70%" isActive={i===idx} onHotspot={(item,pos)=>{ setHot(item); setHotPos(pos); }}/>}
             {s.kind==='room' && s.id!=='salon' && s.id!=='bedroom' && <RoomScene scene={s} isActive={i===idx} onHotspot={(item,pos)=>{ setHot(item); setHotPos(pos); }}/>}
             {s.kind==='begin'   && <BeginScene/>}
           </SceneSlot>
