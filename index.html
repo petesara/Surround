@@ -1008,6 +1008,7 @@ function RoomScene({ scene, onHotspot, isActive }) {
 // ── Three.js salon scene ─────────────────────────────────────────
 function SalonPhotoScene({ scene, isActive, onHotspot }) {
   const veilRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const el=veilRef.current; if(!el) return;
@@ -1017,6 +1018,90 @@ function SalonPhotoScene({ scene, isActive, onHotspot }) {
     } else { el.getAnimations().forEach(a=>a.cancel()); el.style.opacity='1'; }
   }, [isActive]);
 
+  // Mononoke reveal — the room wakes in grayscale; the cursor's path
+  // paints the colour back, blooming stronger where it lingers.
+  useEffect(() => {
+    const canvas = canvasRef.current; if(!canvas) return;
+    const host = canvas.parentElement; if(!host) return;
+    const ctx  = canvas.getContext('2d');
+    const mask = document.createElement('canvas');
+    const mctx = mask.getContext('2d');
+    const img  = new Image();
+    const dpr  = Math.min(window.devicePixelRatio || 1, 2);
+    let ready=false, dirty=false, raf=0, last=null;
+
+    function resize(){
+      const r = host.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const prev = document.createElement('canvas');
+      prev.width = mask.width; prev.height = mask.height;
+      if (mask.width) prev.getContext('2d').drawImage(mask,0,0);
+      canvas.width  = Math.round(r.width  * dpr);
+      canvas.height = Math.round(r.height * dpr);
+      canvas.style.width  = r.width +'px';
+      canvas.style.height = r.height+'px';
+      mask.width = canvas.width; mask.height = canvas.height;
+      if (prev.width) mctx.drawImage(prev,0,0,mask.width,mask.height);
+      dirty = true;
+    }
+
+    function stamp(x,y){
+      const R = 130 * dpr;
+      const g = mctx.createRadialGradient(x,y,0,x,y,R);
+      g.addColorStop(0,   'rgba(255,255,255,.5)');
+      g.addColorStop(0.55,'rgba(255,255,255,.22)');
+      g.addColorStop(1,   'rgba(255,255,255,0)');
+      mctx.fillStyle = g;
+      mctx.beginPath(); mctx.arc(x,y,R,0,Math.PI*2); mctx.fill();
+    }
+
+    function onMove(e){
+      const r = host.getBoundingClientRect();
+      const x = (e.clientX - r.left) * dpr;
+      const y = (e.clientY - r.top ) * dpr;
+      if (last){
+        const dx=x-last.x, dy=y-last.y, d=Math.hypot(dx,dy);
+        const steps = Math.max(1, Math.floor(d/(28*dpr)));
+        for (let i=1;i<=steps;i++) stamp(last.x+dx*i/steps, last.y+dy*i/steps);
+      } else stamp(x,y);
+      last = {x,y};
+      dirty = true;
+    }
+    function onLeave(){ last = null; }
+
+    function draw(){
+      raf = requestAnimationFrame(draw);
+      if (!ready || !dirty) return;
+      dirty = false;
+      const w=canvas.width, h=canvas.height;
+      ctx.clearRect(0,0,w,h);
+      // colour photo, background-size:cover math
+      const s  = Math.max(w/img.naturalWidth, h/img.naturalHeight);
+      const iw = img.naturalWidth*s, ih = img.naturalHeight*s;
+      ctx.drawImage(img,(w-iw)/2,(h-ih)/2,iw,ih);
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.drawImage(mask,0,0);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    img.onload = () => { ready = true; dirty = true; };
+    img.src = IMG_SALON;
+
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(host);
+    host.addEventListener('pointermove', onMove);
+    host.addEventListener('pointerleave', onLeave);
+    raf = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      host.removeEventListener('pointermove', onMove);
+      host.removeEventListener('pointerleave', onLeave);
+    };
+  }, []);
+
   return (
     <>
       <div style={{
@@ -1024,10 +1109,15 @@ function SalonPhotoScene({ scene, isActive, onHotspot }) {
         backgroundImage:'url('+IMG_SALON+')',
         backgroundSize:'cover',
         backgroundPosition:'center center',
+        filter:'grayscale(1) brightness(.82)',
         pointerEvents:'none',
       }}/>
-      <div style={{
+      <canvas ref={canvasRef} style={{
         position:'absolute',inset:0,
+        pointerEvents:'none',zIndex:2,
+      }}/>
+      <div style={{
+        position:'absolute',inset:0,zIndex:3,
         background:'linear-gradient(135deg,rgba(22,9,31,.55) 0%,rgba(22,9,31,.08) 55%,transparent 80%)',
         pointerEvents:'none',
       }}/>
@@ -1047,7 +1137,7 @@ function SalonPhotoScene({ scene, isActive, onHotspot }) {
       ))}
       <div className="moodboard-rail">
         <span className="count">{scene.items.length} pieces</span>
-        <span className="hint">tap a dot</span>
+        <span className="hint">move to wake the room · tap a dot</span>
       </div>
     </>
   );
